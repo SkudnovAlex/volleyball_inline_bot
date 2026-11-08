@@ -1,0 +1,13 @@
+# Секреты
+.env
+
+# Данные бота
+data.json
+data.json.tmp
+
+# IDE
+.idea/
+
+# Сборки
+*.exe
+/bin/
