@@ -22,24 +22,24 @@ type Repository interface {
 	Save(data storage.Data) error
 }
 
-// Service содержит работу бота с чатом. Все публичные методы держат mu
+// Service содержит работу бота с чатом. Все публичные методы держат mutex
 // на всё чтение, изменение и запись данных: cron и нажатия кнопок
 // работают в разных горутинах.
 type Service struct {
-	sender   Sender
-	repo     Repository
-	chatID   int64
-	gameDays map[time.Weekday]bool
-	now      func() time.Time
-	mu       sync.Mutex
+	sender     Sender
+	repository Repository
+	chatID     int64
+	gameDays   map[time.Weekday]bool
+	now        func() time.Time
+	mutex      sync.Mutex
 }
 
-func New(sender Sender, repo Repository, chatID int64, loc *time.Location, gameDays map[time.Weekday]bool) *Service {
+func New(sender Sender, repository Repository, chatID int64, location *time.Location, gameDays map[time.Weekday]bool) *Service {
 	return &Service{
-		sender:   sender,
-		repo:     repo,
-		chatID:   chatID,
-		gameDays: gameDays,
-		now:      func() time.Time { return time.Now().In(loc) },
+		sender:     sender,
+		repository: repository,
+		chatID:     chatID,
+		gameDays:   gameDays,
+		now:        func() time.Time { return time.Now().In(location) },
 	}
 }

@@ -5,8 +5,10 @@ import (
 
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
 
+	"volleyball_inline_bot/bot"
 	"volleyball_inline_bot/config"
 	"volleyball_inline_bot/scheduler"
+	"volleyball_inline_bot/storage"
 )
 
 // updatesTimeout задаёт длительность long polling запроса getUpdates в секундах.
@@ -24,7 +26,13 @@ func main() {
 	}
 	log.Printf("Бот @%s запущен", botAPI.Self.UserName)
 
+	store := storage.NewStore(settings.StorePath)
+	service := bot.New(botAPI, store, settings.ChatID, settings.Location, settings.GameDays)
+
 	planner := scheduler.New(settings.Location)
+	if err := scheduler.Add(planner, settings.Schedule, service.CreateGame); err != nil {
+		log.Fatalf("Ошибка в CRON_SCHEDULE %q: %v", settings.Schedule, err)
+	}
 	planner.Start()
 	log.Printf("Планировщик запущен (создание: %q, очистка: %q, зона: %s, удаление через %d дн.)",
 		settings.Schedule, settings.CleanupSchedule, settings.Location, settings.DeleteAfterDays)
