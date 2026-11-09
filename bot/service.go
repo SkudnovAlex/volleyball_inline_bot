@@ -30,16 +30,19 @@ type Service struct {
 	repository Repository
 	chatID     int64
 	gameDays   map[time.Weekday]bool
-	now        func() time.Time
-	mutex      sync.Mutex
+	// deleteAfterDays задаёт, через сколько дней после игры удалить её сообщение.
+	deleteAfterDays int
+	now             func() time.Time
+	mutex           sync.Mutex
 }
 
-func New(sender Sender, repository Repository, chatID int64, location *time.Location, gameDays map[time.Weekday]bool) *Service {
+func New(sender Sender, repository Repository, chatID int64, location *time.Location, gameDays map[time.Weekday]bool, deleteAfterDays int) *Service {
 	return &Service{
-		sender:     sender,
-		repository: repository,
-		chatID:     chatID,
-		gameDays:   gameDays,
-		now:        func() time.Time { return time.Now().In(location) },
+		sender:          sender,
+		repository:      repository,
+		chatID:          chatID,
+		gameDays:        gameDays,
+		deleteAfterDays: deleteAfterDays,
+		now:             func() time.Time { return time.Now().In(location) },
 	}
 }

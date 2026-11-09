@@ -30,15 +30,19 @@ func main() {
 	log.Printf("Бот @%s запущен", botAPI.Self.UserName)
 
 	store := storage.NewStore(settings.StorePath)
-	service := bot.New(botAPI, store, settings.ChatID, settings.Location, settings.GameDays)
-	// При старте сразу создаём игру, если её время уже пришло: бот мог быть
-	// выключен в момент запуска по расписанию. Затем доска, если её ещё нет.
+	service := bot.New(botAPI, store, settings.ChatID, settings.Location, settings.GameDays, settings.DeleteAfterDays)
+	// При старте сразу выполняем задачи расписания: бот мог быть выключен
+	// в момент их запуска. Затем доска, если её ещё нет.
+	service.CleanupGames()
 	service.CreateGame()
 	service.RefreshBoard()
 
 	planner := scheduler.New(settings.Location)
 	if err := scheduler.Add(planner, settings.Schedule, service.CreateGame); err != nil {
 		log.Fatalf("Ошибка в CRON_SCHEDULE %q: %v", settings.Schedule, err)
+	}
+	if err := scheduler.Add(planner, settings.CleanupSchedule, service.CleanupGames); err != nil {
+		log.Fatalf("Ошибка в CLEANUP_SCHEDULE %q: %v", settings.CleanupSchedule, err)
 	}
 	if err := scheduler.Add(planner, boardCheckSchedule, service.RefreshBoard); err != nil {
 		log.Fatalf("Ошибка в расписании проверки доски: %v", err)

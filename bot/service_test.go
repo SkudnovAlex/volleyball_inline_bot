@@ -69,6 +69,9 @@ func (repository *mockRepo) Save(data storage.Data) error {
 	return nil
 }
 
+// testDeleteAfterDays задаёт срок удаления игр в тестах.
+const testDeleteAfterDays = 14
+
 var testGameDays = map[time.Weekday]bool{
 	time.Tuesday:  true,
 	time.Thursday: true,
@@ -86,7 +89,7 @@ func wednesday() time.Time {
 }
 
 func newService(sender *mockSender, repository *mockRepo, now func() time.Time) *Service {
-	service := New(sender, repository, -1001, time.UTC, testGameDays)
+	service := New(sender, repository, -1001, time.UTC, testGameDays, testDeleteAfterDays)
 	service.now = now
 	return service
 }
