@@ -14,36 +14,36 @@ func TestLoad_OK_WithDefaults(t *testing.T) {
 	t.Setenv("GAME_DAYS", "")
 	t.Setenv("DELETE_AFTER_DAYS", "")
 
-	cfg, err := Load()
+	settings, err := Load()
 	if err != nil {
 		t.Fatalf("неожиданная ошибка: %v", err)
 	}
-	if cfg.BotToken != "token123" {
-		t.Errorf("BotToken = %q", cfg.BotToken)
+	if settings.BotToken != "token123" {
+		t.Errorf("BotToken = %q", settings.BotToken)
 	}
-	if cfg.ChatID != -1001234567890 {
-		t.Errorf("ChatID = %d", cfg.ChatID)
+	if settings.ChatID != -1001234567890 {
+		t.Errorf("ChatID = %d", settings.ChatID)
 	}
-	if cfg.StorePath != defaultStorePath {
-		t.Errorf("StorePath = %q, ожидался дефолт %q", cfg.StorePath, defaultStorePath)
+	if settings.StorePath != defaultStorePath {
+		t.Errorf("StorePath = %q, ожидался дефолт %q", settings.StorePath, defaultStorePath)
 	}
-	if cfg.Schedule != defaultSchedule {
-		t.Errorf("Schedule = %q, ожидался дефолт %q", cfg.Schedule, defaultSchedule)
+	if settings.Schedule != defaultSchedule {
+		t.Errorf("Schedule = %q, ожидался дефолт %q", settings.Schedule, defaultSchedule)
 	}
-	if cfg.Location == nil || cfg.Location.String() != defaultTimezone {
-		t.Errorf("Location = %v, ожидался дефолт %q", cfg.Location, defaultTimezone)
+	if settings.Location == nil || settings.Location.String() != defaultTimezone {
+		t.Errorf("Location = %v, ожидался дефолт %q", settings.Location, defaultTimezone)
 	}
-	if cfg.DeleteAfterDays != 14 {
-		t.Errorf("DeleteAfterDays = %d, ожидался дефолт 14", cfg.DeleteAfterDays)
+	if settings.DeleteAfterDays != 14 {
+		t.Errorf("DeleteAfterDays = %d, ожидался дефолт 14", settings.DeleteAfterDays)
 	}
 	// По умолчанию игровые: вторник, четверг, пятница, воскресенье.
 	wantDays := map[time.Weekday]bool{time.Tuesday: true, time.Thursday: true, time.Friday: true, time.Sunday: true}
-	if len(cfg.GameDays) != len(wantDays) {
-		t.Fatalf("GameDays = %v, ожидалось %v", cfg.GameDays, wantDays)
+	if len(settings.GameDays) != len(wantDays) {
+		t.Fatalf("GameDays = %v, ожидалось %v", settings.GameDays, wantDays)
 	}
-	for d := range wantDays {
-		if !cfg.GameDays[d] {
-			t.Errorf("в GameDays нет ожидаемого дня %s", d)
+	for day := range wantDays {
+		if !settings.GameDays[day] {
+			t.Errorf("в GameDays нет ожидаемого дня %s", day)
 		}
 	}
 }
@@ -53,12 +53,12 @@ func TestLoad_GameDaysOverride(t *testing.T) {
 	t.Setenv("TELEGRAM_CHAT_ID", "42")
 	t.Setenv("GAME_DAYS", "monday, FRIDAY")
 
-	cfg, err := Load()
+	settings, err := Load()
 	if err != nil {
 		t.Fatalf("неожиданная ошибка: %v", err)
 	}
-	if len(cfg.GameDays) != 2 || !cfg.GameDays[time.Monday] || !cfg.GameDays[time.Friday] {
-		t.Fatalf("GameDays = %v, ожидались Monday и Friday", cfg.GameDays)
+	if len(settings.GameDays) != 2 || !settings.GameDays[time.Monday] || !settings.GameDays[time.Friday] {
+		t.Fatalf("GameDays = %v, ожидались Monday и Friday", settings.GameDays)
 	}
 }
 
@@ -88,15 +88,15 @@ func TestLoad_OverridesFromEnv(t *testing.T) {
 	t.Setenv("STORE_PATH", "/tmp/custom.json")
 	t.Setenv("CRON_SCHEDULE", "0 20 * * *")
 
-	cfg, err := Load()
+	settings, err := Load()
 	if err != nil {
 		t.Fatalf("неожиданная ошибка: %v", err)
 	}
-	if cfg.StorePath != "/tmp/custom.json" {
-		t.Errorf("StorePath = %q", cfg.StorePath)
+	if settings.StorePath != "/tmp/custom.json" {
+		t.Errorf("StorePath = %q", settings.StorePath)
 	}
-	if cfg.Schedule != "0 20 * * *" {
-		t.Errorf("Schedule = %q", cfg.Schedule)
+	if settings.Schedule != "0 20 * * *" {
+		t.Errorf("Schedule = %q", settings.Schedule)
 	}
 }
 
@@ -132,23 +132,23 @@ func TestLoad_DeleteAfterDaysOverride(t *testing.T) {
 	t.Setenv("TELEGRAM_CHAT_ID", "42")
 	t.Setenv("DELETE_AFTER_DAYS", "3")
 
-	cfg, err := Load()
+	settings, err := Load()
 	if err != nil {
 		t.Fatalf("неожиданная ошибка: %v", err)
 	}
-	if cfg.DeleteAfterDays != 3 {
-		t.Errorf("DeleteAfterDays = %d, ожидалось 3", cfg.DeleteAfterDays)
+	if settings.DeleteAfterDays != 3 {
+		t.Errorf("DeleteAfterDays = %d, ожидалось 3", settings.DeleteAfterDays)
 	}
 }
 
 func TestLoad_BadDeleteAfterDays(t *testing.T) {
-	for _, v := range []string{"abc", "0", "-5"} {
+	for _, value := range []string{"abc", "0", "-5"} {
 		t.Setenv("TELEGRAM_BOT_TOKEN", "t")
 		t.Setenv("TELEGRAM_CHAT_ID", "42")
-		t.Setenv("DELETE_AFTER_DAYS", v)
+		t.Setenv("DELETE_AFTER_DAYS", value)
 
 		if _, err := Load(); err == nil {
-			t.Errorf("DELETE_AFTER_DAYS=%q: ожидалась ошибка", v)
+			t.Errorf("DELETE_AFTER_DAYS=%q: ожидалась ошибка", value)
 		}
 	}
 }

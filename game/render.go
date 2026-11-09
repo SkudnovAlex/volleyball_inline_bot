@@ -37,89 +37,89 @@ var weekdays = map[time.Weekday]string{
 
 // RenderGame возвращает текст сообщения игры в HTML и клавиатуру.
 // Для прошедшей игры клавиатура nil: при редактировании кнопки исчезнут.
-func RenderGame(g *storage.Game) (string, *tgbotapi.InlineKeyboardMarkup) {
-	var b strings.Builder
-	count := Count(g)
+func RenderGame(game *storage.Game) (string, *tgbotapi.InlineKeyboardMarkup) {
+	var text strings.Builder
+	count := Count(game)
 
 	switch {
-	case g.Finished:
-		fmt.Fprintf(&b, "<b>%s · игра прошла</b>\n", DayTitle(g.Date))
-		fmt.Fprintf(&b, "Было человек: %d\n", count)
+	case game.Finished:
+		fmt.Fprintf(&text, "<b>%s · игра прошла</b>\n", DayTitle(game.Date))
+		fmt.Fprintf(&text, "Было человек: %d\n", count)
 	case count >= Limit:
-		fmt.Fprintf(&b, "<b>%s в %d:00</b>\n", DayTitle(g.Date), GameHour)
-		fmt.Fprintf(&b, "Состав собран · %d/%d\n", count, Limit)
+		fmt.Fprintf(&text, "<b>%s в %d:00</b>\n", DayTitle(game.Date), GameHour)
+		fmt.Fprintf(&text, "Состав собран · %d/%d\n", count, Limit)
 	default:
-		fmt.Fprintf(&b, "<b>%s в %d:00</b>\n", DayTitle(g.Date), GameHour)
-		fmt.Fprintf(&b, "Запись открыта · %d/%d\n", count, Limit)
+		fmt.Fprintf(&text, "<b>%s в %d:00</b>\n", DayTitle(game.Date), GameHour)
+		fmt.Fprintf(&text, "Запись открыта · %d/%d\n", count, Limit)
 	}
 
-	for i, line := range lineup(g) {
-		fmt.Fprintf(&b, "%d. %s\n", i+1, line)
+	for index, line := range lineup(game) {
+		fmt.Fprintf(&text, "%d. %s\n", index+1, line)
 	}
-	if !g.Finished && count < Limit {
-		fmt.Fprintf(&b, "свободно: %d\n", Limit-count)
+	if !game.Finished && count < Limit {
+		fmt.Fprintf(&text, "свободно: %d\n", Limit-count)
 	}
 
 	var declined []string
-	for _, p := range g.Players {
-		if p.Status == storage.StatusDeclined {
-			declined = append(declined, html.EscapeString(p.Name))
+	for _, player := range game.Players {
+		if player.Status == storage.StatusDeclined {
+			declined = append(declined, html.EscapeString(player.Name))
 		}
 	}
-	if len(declined) > 0 && !g.Finished {
-		fmt.Fprintf(&b, "Не смогут: %s\n", strings.Join(declined, ", "))
+	if len(declined) > 0 && !game.Finished {
+		fmt.Fprintf(&text, "Не смогут: %s\n", strings.Join(declined, ", "))
 	}
 
-	return strings.TrimRight(b.String(), "\n"), keyboard(g, count)
+	return strings.TrimRight(text.String(), "\n"), buildKeyboard(game, count)
 }
 
 // DayTitle превращает "2026-11-18" в "Вторник 18.11".
 func DayTitle(date string) string {
-	d, err := time.Parse(DateLayout, date)
+	day, err := time.Parse(DateLayout, date)
 	if err != nil {
 		return date
 	}
-	return fmt.Sprintf("%s %s", weekdays[d.Weekday()], d.Format("02.01"))
+	return fmt.Sprintf("%s %s", weekdays[day.Weekday()], day.Format("02.01"))
 }
 
 // lineup возвращает строки состава: человек, затем его друзья.
-func lineup(g *storage.Game) []string {
+func lineup(game *storage.Game) []string {
 	var lines []string
-	for _, p := range g.Players {
-		name := html.EscapeString(p.Name)
-		if p.Status == storage.StatusGoing {
+	for _, player := range game.Players {
+		name := html.EscapeString(player.Name)
+		if player.Status == storage.StatusGoing {
 			lines = append(lines, name)
 		}
-		for i := 0; i < p.Friends; i++ {
+		for range player.Friends {
 			lines = append(lines, fmt.Sprintf("друг (%s)", name))
 		}
 	}
 	return lines
 }
 
-func keyboard(g *storage.Game, count int) *tgbotapi.InlineKeyboardMarkup {
-	if g.Finished {
+func buildKeyboard(game *storage.Game, count int) *tgbotapi.InlineKeyboardMarkup {
+	if game.Finished {
 		return nil
 	}
-	btn := func(text, action string) tgbotapi.InlineKeyboardButton {
-		return tgbotapi.NewInlineKeyboardButtonData(text, action+":"+g.Date)
+	button := func(text, action string) tgbotapi.InlineKeyboardButton {
+		return tgbotapi.NewInlineKeyboardButtonData(text, action+":"+game.Date)
 	}
 	leave := tgbotapi.NewInlineKeyboardRow(
-		btn("❌ Не смогу", ActionDecline),
-		btn("➖ Минус друг", ActionMinus),
+		button("❌ Не смогу", ActionDecline),
+		button("➖ Минус друг", ActionMinus),
 	)
 
-	var kb tgbotapi.InlineKeyboardMarkup
+	var keyboard tgbotapi.InlineKeyboardMarkup
 	if count >= Limit {
-		kb = tgbotapi.NewInlineKeyboardMarkup(leave)
+		keyboard = tgbotapi.NewInlineKeyboardMarkup(leave)
 	} else {
-		kb = tgbotapi.NewInlineKeyboardMarkup(
+		keyboard = tgbotapi.NewInlineKeyboardMarkup(
 			tgbotapi.NewInlineKeyboardRow(
-				btn("✅ Иду", ActionJoin),
-				btn("➕ Друг", ActionFriend),
+				button("✅ Иду", ActionJoin),
+				button("➕ Друг", ActionFriend),
 			),
 			leave,
 		)
 	}
-	return &kb
+	return &keyboard
 }

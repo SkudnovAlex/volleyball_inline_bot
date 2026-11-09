@@ -39,78 +39,78 @@ const (
 )
 
 // Count возвращает число идущих: записавшиеся сами плюс все друзья.
-func Count(g *storage.Game) int {
-	n := 0
-	for _, p := range g.Players {
-		if p.Status == storage.StatusGoing {
-			n++
+func Count(game *storage.Game) int {
+	count := 0
+	for _, player := range game.Players {
+		if player.Status == storage.StatusGoing {
+			count++
 		}
-		n += p.Friends
+		count += player.Friends
 	}
-	return n
+	return count
 }
 
 // Free возвращает число свободных мест.
-func Free(g *storage.Game) int {
-	return Limit - Count(g)
+func Free(game *storage.Game) int {
+	return Limit - Count(game)
 }
 
 // Join записывает пользователя на игру. Человек, который раньше нажал
 // «Не смогу» или записывал только друзей, остаётся на своём месте в списке.
-func Join(g *storage.Game, u User) error {
-	p := find(g, u)
-	if p != nil && p.Status == storage.StatusGoing {
+func Join(game *storage.Game, user User) error {
+	player := find(game, user)
+	if player != nil && player.Status == storage.StatusGoing {
 		return ErrAlreadyGoing
 	}
-	if Free(g) < 1 {
+	if Free(game) < 1 {
 		return ErrNoPlaces
 	}
-	if p == nil {
-		p = add(g, u)
+	if player == nil {
+		player = add(game, user)
 	}
-	p.Status = storage.StatusGoing
+	player.Status = storage.StatusGoing
 	return nil
 }
 
 // Decline отмечает, что пользователь не сможет. Его друзья остаются в списке.
-func Decline(g *storage.Game, u User) error {
-	p := find(g, u)
-	if p != nil && p.Status == storage.StatusDeclined {
+func Decline(game *storage.Game, user User) error {
+	player := find(game, user)
+	if player != nil && player.Status == storage.StatusDeclined {
 		return ErrAlreadyDecline
 	}
-	if p == nil {
-		p = add(g, u)
+	if player == nil {
+		player = add(game, user)
 	}
-	p.Status = storage.StatusDeclined
+	player.Status = storage.StatusDeclined
 	return nil
 }
 
 // AddFriend записывает ещё одного друга пользователя.
-func AddFriend(g *storage.Game, u User) error {
-	p := find(g, u)
-	if p != nil && p.Friends >= MaxFriends {
+func AddFriend(game *storage.Game, user User) error {
+	player := find(game, user)
+	if player != nil && player.Friends >= MaxFriends {
 		return ErrTooManyFriends
 	}
-	if Free(g) < 1 {
+	if Free(game) < 1 {
 		return ErrNoPlaces
 	}
-	if p == nil {
-		p = add(g, u)
+	if player == nil {
+		player = add(game, user)
 	}
-	p.Friends++
+	player.Friends++
 	return nil
 }
 
 // RemoveFriend убирает одного друга пользователя. Если у человека
 // не осталось ни друзей, ни статуса, он убирается из списка.
-func RemoveFriend(g *storage.Game, u User) error {
-	p := find(g, u)
-	if p == nil || p.Friends == 0 {
+func RemoveFriend(game *storage.Game, user User) error {
+	player := find(game, user)
+	if player == nil || player.Friends == 0 {
 		return ErrNoFriends
 	}
-	p.Friends--
-	if p.Friends == 0 && p.Status == storage.StatusNone {
-		remove(g, u.ID)
+	player.Friends--
+	if player.Friends == 0 && player.Status == storage.StatusNone {
+		remove(game, user.ID)
 	}
 	return nil
 }
@@ -128,25 +128,25 @@ func Transition(before, after int) Event {
 }
 
 // find возвращает игрока по ID и обновляет его имя: его могли сменить в Telegram.
-func find(g *storage.Game, u User) *storage.Player {
-	for i := range g.Players {
-		if g.Players[i].UserID == u.ID {
-			g.Players[i].Name = u.Name
-			return &g.Players[i]
+func find(game *storage.Game, user User) *storage.Player {
+	for index := range game.Players {
+		if game.Players[index].UserID == user.ID {
+			game.Players[index].Name = user.Name
+			return &game.Players[index]
 		}
 	}
 	return nil
 }
 
-func add(g *storage.Game, u User) *storage.Player {
-	g.Players = append(g.Players, storage.Player{UserID: u.ID, Name: u.Name})
-	return &g.Players[len(g.Players)-1]
+func add(game *storage.Game, user User) *storage.Player {
+	game.Players = append(game.Players, storage.Player{UserID: user.ID, Name: user.Name})
+	return &game.Players[len(game.Players)-1]
 }
 
-func remove(g *storage.Game, userID int64) {
-	for i, p := range g.Players {
-		if p.UserID == userID {
-			g.Players = append(g.Players[:i], g.Players[i+1:]...)
+func remove(game *storage.Game, userID int64) {
+	for index, player := range game.Players {
+		if player.UserID == userID {
+			game.Players = append(game.Players[:index], game.Players[index+1:]...)
 			return
 		}
 	}

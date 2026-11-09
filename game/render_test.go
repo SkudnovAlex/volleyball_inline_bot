@@ -10,24 +10,24 @@ import (
 )
 
 // buttons возвращает callback_data всех кнопок построчно.
-func buttons(kb *tgbotapi.InlineKeyboardMarkup) [][]string {
+func buttons(keyboard *tgbotapi.InlineKeyboardMarkup) [][]string {
 	var rows [][]string
-	for _, row := range kb.InlineKeyboard {
-		var r []string
-		for _, b := range row {
-			r = append(r, *b.CallbackData)
+	for _, buttonsRow := range keyboard.InlineKeyboard {
+		var row []string
+		for _, button := range buttonsRow {
+			row = append(row, *button.CallbackData)
 		}
-		rows = append(rows, r)
+		rows = append(rows, row)
 	}
 	return rows
 }
 
-func equalRows(a, b [][]string) bool {
-	if len(a) != len(b) {
+func equalRows(got, want [][]string) bool {
+	if len(got) != len(want) {
 		return false
 	}
-	for i := range a {
-		if strings.Join(a[i], ",") != strings.Join(b[i], ",") {
+	for index := range got {
+		if strings.Join(got[index], ",") != strings.Join(want[index], ",") {
 			return false
 		}
 	}
@@ -47,7 +47,7 @@ func TestDayTitle(t *testing.T) {
 }
 
 func TestRenderGame_Open(t *testing.T) {
-	g := &storage.Game{Date: "2026-11-17", Players: []storage.Player{
+	game := &storage.Game{Date: "2026-11-17", Players: []storage.Player{
 		{UserID: 1, Name: "Мария", Status: storage.StatusGoing},
 		{UserID: 2, Name: "Иван", Status: storage.StatusGoing, Friends: 1},
 		{UserID: 3, Name: "Павел", Status: storage.StatusDeclined},
@@ -55,7 +55,7 @@ func TestRenderGame_Open(t *testing.T) {
 		{UserID: 5, Name: "Олег", Status: storage.StatusNone, Friends: 1},
 	}}
 
-	text, kb := RenderGame(g)
+	text, keyboard := RenderGame(game)
 
 	want := strings.Join([]string{
 		"<b>Вторник 17.11 в 19:00</b>",
@@ -77,16 +77,16 @@ func TestRenderGame_Open(t *testing.T) {
 		{"join:2026-11-17", "friend:2026-11-17"},
 		{"decline:2026-11-17", "minus:2026-11-17"},
 	}
-	if kb == nil || !equalRows(buttons(kb), wantKb) {
-		t.Fatalf("кнопки = %v, ожидалось %v", kb, wantKb)
+	if keyboard == nil || !equalRows(buttons(keyboard), wantKb) {
+		t.Fatalf("кнопки = %v, ожидалось %v", keyboard, wantKb)
 	}
 }
 
 func TestRenderGame_Full(t *testing.T) {
-	g := gameWith(Limit)
-	g.Date = "2026-11-17"
+	game := gameWith(Limit)
+	game.Date = "2026-11-17"
 
-	text, kb := RenderGame(g)
+	text, keyboard := RenderGame(game)
 
 	if !strings.Contains(text, "Состав собран · 12/12") {
 		t.Errorf("нет строки о наборе:\n%s", text)
@@ -95,25 +95,25 @@ func TestRenderGame_Full(t *testing.T) {
 		t.Errorf("при полном составе не нужна строка о свободных местах:\n%s", text)
 	}
 	wantKb := [][]string{{"decline:2026-11-17", "minus:2026-11-17"}}
-	if kb == nil || !equalRows(buttons(kb), wantKb) {
-		t.Fatalf("кнопки = %v, ожидалось %v", buttons(kb), wantKb)
+	if keyboard == nil || !equalRows(buttons(keyboard), wantKb) {
+		t.Fatalf("кнопки = %v, ожидалось %v", buttons(keyboard), wantKb)
 	}
 }
 
 func TestRenderGame_Finished(t *testing.T) {
-	g := &storage.Game{Date: "2026-11-17", Finished: true, Players: []storage.Player{
+	game := &storage.Game{Date: "2026-11-17", Finished: true, Players: []storage.Player{
 		{UserID: 1, Name: "Мария", Status: storage.StatusGoing},
 		{UserID: 3, Name: "Павел", Status: storage.StatusDeclined},
 	}}
 
-	text, kb := RenderGame(g)
+	text, keyboard := RenderGame(game)
 
 	want := "<b>Вторник 17.11 · игра прошла</b>\nБыло человек: 1\n1. Мария"
 	if text != want {
 		t.Fatalf("текст:\n%s\n\nожидалось:\n%s", text, want)
 	}
-	if kb != nil {
-		t.Fatalf("у прошедшей игры не должно быть кнопок: %v", buttons(kb))
+	if keyboard != nil {
+		t.Fatalf("у прошедшей игры не должно быть кнопок: %v", buttons(keyboard))
 	}
 }
 
@@ -127,11 +127,11 @@ func TestRenderGame_Empty(t *testing.T) {
 }
 
 func TestRenderGame_EscapesNames(t *testing.T) {
-	g := &storage.Game{Date: "2026-11-17", Players: []storage.Player{
+	game := &storage.Game{Date: "2026-11-17", Players: []storage.Player{
 		{UserID: 1, Name: "<b>Хакер</b> & Ко", Status: storage.StatusGoing, Friends: 1},
 	}}
 
-	text, _ := RenderGame(g)
+	text, _ := RenderGame(game)
 
 	if strings.Contains(text, "<b>Хакер</b>") {
 		t.Fatalf("имя не экранировано:\n%s", text)

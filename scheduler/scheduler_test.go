@@ -6,25 +6,25 @@ import (
 )
 
 func TestAdd_InvalidSchedule(t *testing.T) {
-	c := New(time.UTC)
-	if err := Add(c, "not a cron", func() {}); err == nil {
+	planner := New(time.UTC)
+	if err := Add(planner, "not a cron", func() {}); err == nil {
 		t.Fatal("ожидалась ошибка для некорректного расписания")
 	}
-	c.Stop()
+	planner.Stop()
 }
 
 func TestAdd_MultipleJobs(t *testing.T) {
-	c := New(time.UTC)
-	if err := Add(c, "0 20 * * *", func() {}); err != nil {
+	planner := New(time.UTC)
+	if err := Add(planner, "0 20 * * *", func() {}); err != nil {
 		t.Fatalf("неожиданная ошибка: %v", err)
 	}
-	if err := Add(c, "0 6 * * *", func() {}); err != nil {
+	if err := Add(planner, "0 6 * * *", func() {}); err != nil {
 		t.Fatalf("неожиданная ошибка: %v", err)
 	}
-	c.Start()
-	defer c.Stop()
+	planner.Start()
+	defer planner.Stop()
 
-	if len(c.Entries()) != 2 {
-		t.Errorf("ожидалось 2 задачи, получено: %d", len(c.Entries()))
+	if len(planner.Entries()) != 2 {
+		t.Errorf("ожидалось 2 задачи, получено: %d", len(planner.Entries()))
 	}
 }

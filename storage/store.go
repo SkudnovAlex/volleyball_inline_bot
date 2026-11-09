@@ -14,17 +14,17 @@ func NewStore(path string) *Store {
 func (s *Store) Load() (Data, error) {
 	data := Data{Requisites: map[int64]string{}}
 
-	raw, err := os.ReadFile(s.path)
+	content, err := os.ReadFile(s.path)
 	if err != nil {
 		if errors.Is(err, os.ErrNotExist) {
 			return data, nil
 		}
 		return Data{}, err
 	}
-	if len(raw) == 0 {
+	if len(content) == 0 {
 		return data, nil
 	}
-	if err := json.Unmarshal(raw, &data); err != nil {
+	if err := json.Unmarshal(content, &data); err != nil {
 		return Data{}, err
 	}
 	if data.Requisites == nil {
@@ -35,13 +35,13 @@ func (s *Store) Load() (Data, error) {
 
 // Save атомарно перезаписывает файл: пишет во временный и переименовывает его.
 func (s *Store) Save(data Data) error {
-	raw, err := json.MarshalIndent(data, "", "  ")
+	content, err := json.MarshalIndent(data, "", "  ")
 	if err != nil {
 		return err
 	}
-	tmp := s.path + ".tmp"
-	if err := os.WriteFile(tmp, raw, 0600); err != nil {
+	tempPath := s.path + ".tmp"
+	if err := os.WriteFile(tempPath, content, 0600); err != nil {
 		return err
 	}
-	return os.Rename(tmp, s.path)
+	return os.Rename(tempPath, s.path)
 }

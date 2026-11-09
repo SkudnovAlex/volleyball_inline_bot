@@ -11,26 +11,26 @@ import (
 )
 
 // New создаёт планировщик, привязанный к указанной таймзоне.
-func New(loc *time.Location) *cron.Cron {
-	return cron.New(cron.WithLocation(loc))
+func New(location *time.Location) *cron.Cron {
+	return cron.New(cron.WithLocation(location))
 }
 
 // Add регистрирует задачу с заданным расписанием.
-func Add(c *cron.Cron, schedule string, job func()) error {
-	_, err := c.AddFunc(schedule, job)
+func Add(planner *cron.Cron, schedule string, job func()) error {
+	_, err := planner.AddFunc(schedule, job)
 	return err
 }
 
 // WaitForShutdown блокируется до SIGINT/SIGTERM и корректно останавливает cron.
-func WaitForShutdown(c *cron.Cron) {
-	sigChan := make(chan os.Signal, 1)
-	signal.Notify(sigChan, syscall.SIGINT, syscall.SIGTERM)
+func WaitForShutdown(planner *cron.Cron) {
+	signals := make(chan os.Signal, 1)
+	signal.Notify(signals, syscall.SIGINT, syscall.SIGTERM)
 
-	<-sigChan
+	<-signals
 	log.Println("Получен сигнал завершения. Бот останавливается...")
 
-	ctx := c.Stop()
-	<-ctx.Done()
+	stopped := planner.Stop()
+	<-stopped.Done()
 
 	log.Println("Бот остановлен")
 }

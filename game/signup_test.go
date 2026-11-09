@@ -14,12 +14,12 @@ var (
 )
 
 // gameWith возвращает игру, где уже записались n человек без друзей.
-func gameWith(n int) *storage.Game {
-	g := &storage.Game{Date: "2026-11-18"}
-	for i := 0; i < n; i++ {
-		g.Players = append(g.Players, storage.Player{UserID: int64(100 + i), Name: "Игрок", Status: storage.StatusGoing})
+func gameWith(players int) *storage.Game {
+	game := &storage.Game{Date: "2026-11-18"}
+	for index := range players {
+		game.Players = append(game.Players, storage.Player{UserID: int64(100 + index), Name: "Игрок", Status: storage.StatusGoing})
 	}
-	return g
+	return game
 }
 
 func mustOK(t *testing.T, err error) {
@@ -30,151 +30,151 @@ func mustOK(t *testing.T, err error) {
 }
 
 func TestCount_GoingAndFriends(t *testing.T) {
-	g := &storage.Game{Players: []storage.Player{
+	game := &storage.Game{Players: []storage.Player{
 		{UserID: 1, Status: storage.StatusGoing},
 		{UserID: 2, Status: storage.StatusGoing, Friends: 1},
 		{UserID: 3, Status: storage.StatusDeclined, Friends: 2},
 		{UserID: 4, Status: storage.StatusDeclined},
 	}}
 
-	if got := Count(g); got != 5 {
+	if got := Count(game); got != 5 {
 		t.Fatalf("Count = %d, ожидалось 5 (1 + 1+1 + 0+2)", got)
 	}
-	if got := Free(g); got != Limit-5 {
+	if got := Free(game); got != Limit-5 {
 		t.Fatalf("Free = %d, ожидалось %d", got, Limit-5)
 	}
 }
 
 func TestJoin(t *testing.T) {
-	g := gameWith(0)
-	mustOK(t, Join(g, maria))
+	game := gameWith(0)
+	mustOK(t, Join(game, maria))
 
-	if len(g.Players) != 1 || g.Players[0].Status != storage.StatusGoing {
-		t.Fatalf("Мария должна быть в списке со статусом going: %+v", g.Players)
+	if len(game.Players) != 1 || game.Players[0].Status != storage.StatusGoing {
+		t.Fatalf("Мария должна быть в списке со статусом going: %+v", game.Players)
 	}
-	if err := Join(g, maria); !errors.Is(err, ErrAlreadyGoing) {
+	if err := Join(game, maria); !errors.Is(err, ErrAlreadyGoing) {
 		t.Fatalf("повторное Иду: ожидалась ErrAlreadyGoing, получено %v", err)
 	}
 }
 
 func TestJoin_Full(t *testing.T) {
-	g := gameWith(Limit)
-	if err := Join(g, maria); !errors.Is(err, ErrNoPlaces) {
+	game := gameWith(Limit)
+	if err := Join(game, maria); !errors.Is(err, ErrNoPlaces) {
 		t.Fatalf("ожидалась ErrNoPlaces, получено %v", err)
 	}
-	if len(g.Players) != Limit {
+	if len(game.Players) != Limit {
 		t.Fatalf("при отказе список не должен меняться")
 	}
 }
 
 func TestJoin_AfterDeclineKeepsPlace(t *testing.T) {
-	g := gameWith(0)
-	mustOK(t, Join(g, maria))
-	mustOK(t, Join(g, ivan))
-	mustOK(t, Decline(g, maria))
-	mustOK(t, Join(g, maria))
+	game := gameWith(0)
+	mustOK(t, Join(game, maria))
+	mustOK(t, Join(game, ivan))
+	mustOK(t, Decline(game, maria))
+	mustOK(t, Join(game, maria))
 
-	if g.Players[0].UserID != maria.ID || g.Players[0].Status != storage.StatusGoing {
-		t.Fatalf("Мария должна вернуться на первое место: %+v", g.Players)
+	if game.Players[0].UserID != maria.ID || game.Players[0].Status != storage.StatusGoing {
+		t.Fatalf("Мария должна вернуться на первое место: %+v", game.Players)
 	}
 }
 
 func TestJoin_UpdatesName(t *testing.T) {
-	g := gameWith(0)
-	mustOK(t, Decline(g, maria))
-	mustOK(t, Join(g, User{ID: maria.ID, Name: "Маша"}))
+	game := gameWith(0)
+	mustOK(t, Decline(game, maria))
+	mustOK(t, Join(game, User{ID: maria.ID, Name: "Маша"}))
 
-	if g.Players[0].Name != "Маша" {
-		t.Fatalf("имя должно обновиться, получено %q", g.Players[0].Name)
+	if game.Players[0].Name != "Маша" {
+		t.Fatalf("имя должно обновиться, получено %q", game.Players[0].Name)
 	}
 }
 
 func TestDecline_KeepsFriends(t *testing.T) {
-	g := gameWith(0)
-	mustOK(t, Join(g, ivan))
-	mustOK(t, AddFriend(g, ivan))
-	mustOK(t, AddFriend(g, ivan))
-	mustOK(t, Decline(g, ivan))
+	game := gameWith(0)
+	mustOK(t, Join(game, ivan))
+	mustOK(t, AddFriend(game, ivan))
+	mustOK(t, AddFriend(game, ivan))
+	mustOK(t, Decline(game, ivan))
 
-	if got := Count(g); got != 2 {
+	if got := Count(game); got != 2 {
 		t.Fatalf("после Не смогу друзья остаются: Count = %d, ожидалось 2", got)
 	}
-	if err := Decline(g, ivan); !errors.Is(err, ErrAlreadyDecline) {
+	if err := Decline(game, ivan); !errors.Is(err, ErrAlreadyDecline) {
 		t.Fatalf("повторное Не смогу: ожидалась ErrAlreadyDecline, получено %v", err)
 	}
 }
 
 func TestDecline_NewPlayerListed(t *testing.T) {
-	g := gameWith(0)
-	mustOK(t, Decline(g, anna))
+	game := gameWith(0)
+	mustOK(t, Decline(game, anna))
 
-	if len(g.Players) != 1 || g.Players[0].Status != storage.StatusDeclined {
-		t.Fatalf("Анна должна попасть в список не идущих: %+v", g.Players)
+	if len(game.Players) != 1 || game.Players[0].Status != storage.StatusDeclined {
+		t.Fatalf("Анна должна попасть в список не идущих: %+v", game.Players)
 	}
 }
 
 func TestAddFriend_Limit(t *testing.T) {
-	g := gameWith(0)
-	for i := 0; i < MaxFriends; i++ {
-		mustOK(t, AddFriend(g, ivan))
+	game := gameWith(0)
+	for range MaxFriends {
+		mustOK(t, AddFriend(game, ivan))
 	}
 
-	if err := AddFriend(g, ivan); !errors.Is(err, ErrTooManyFriends) {
+	if err := AddFriend(game, ivan); !errors.Is(err, ErrTooManyFriends) {
 		t.Fatalf("друг сверх MaxFriends: ожидалась ErrTooManyFriends, получено %v", err)
 	}
-	if g.Players[0].Friends != MaxFriends {
-		t.Fatalf("Friends = %d, ожидалось %d", g.Players[0].Friends, MaxFriends)
+	if game.Players[0].Friends != MaxFriends {
+		t.Fatalf("Friends = %d, ожидалось %d", game.Players[0].Friends, MaxFriends)
 	}
 }
 
 func TestAddFriend_WithoutJoin(t *testing.T) {
-	g := gameWith(0)
-	mustOK(t, AddFriend(g, ivan))
+	game := gameWith(0)
+	mustOK(t, AddFriend(game, ivan))
 
-	if g.Players[0].Status != storage.StatusNone || Count(g) != 1 {
-		t.Fatalf("записан только друг Ивана: %+v, Count = %d", g.Players, Count(g))
+	if game.Players[0].Status != storage.StatusNone || Count(game) != 1 {
+		t.Fatalf("записан только друг Ивана: %+v, Count = %d", game.Players, Count(game))
 	}
 }
 
 func TestAddFriend_LastPlace(t *testing.T) {
-	g := gameWith(Limit - 1)
-	mustOK(t, AddFriend(g, ivan))
+	game := gameWith(Limit - 1)
+	mustOK(t, AddFriend(game, ivan))
 
-	if err := AddFriend(g, ivan); !errors.Is(err, ErrNoPlaces) {
+	if err := AddFriend(game, ivan); !errors.Is(err, ErrNoPlaces) {
 		t.Fatalf("сверх лимита: ожидалась ErrNoPlaces, получено %v", err)
 	}
-	if Count(g) != Limit {
-		t.Fatalf("Count = %d, ожидалось %d", Count(g), Limit)
+	if Count(game) != Limit {
+		t.Fatalf("Count = %d, ожидалось %d", Count(game), Limit)
 	}
 }
 
 func TestRemoveFriend(t *testing.T) {
-	g := gameWith(0)
-	if err := RemoveFriend(g, ivan); !errors.Is(err, ErrNoFriends) {
+	game := gameWith(0)
+	if err := RemoveFriend(game, ivan); !errors.Is(err, ErrNoFriends) {
 		t.Fatalf("без записи: ожидалась ErrNoFriends, получено %v", err)
 	}
 
-	mustOK(t, Join(g, ivan))
-	if err := RemoveFriend(g, ivan); !errors.Is(err, ErrNoFriends) {
+	mustOK(t, Join(game, ivan))
+	if err := RemoveFriend(game, ivan); !errors.Is(err, ErrNoFriends) {
 		t.Fatalf("без друзей: ожидалась ErrNoFriends, получено %v", err)
 	}
 
-	mustOK(t, AddFriend(g, ivan))
-	mustOK(t, AddFriend(g, ivan))
-	mustOK(t, RemoveFriend(g, ivan))
-	if g.Players[0].Friends != 1 || g.Players[0].Status != storage.StatusGoing {
-		t.Fatalf("должен остаться Иван с одним другом: %+v", g.Players)
+	mustOK(t, AddFriend(game, ivan))
+	mustOK(t, AddFriend(game, ivan))
+	mustOK(t, RemoveFriend(game, ivan))
+	if game.Players[0].Friends != 1 || game.Players[0].Status != storage.StatusGoing {
+		t.Fatalf("должен остаться Иван с одним другом: %+v", game.Players)
 	}
 }
 
 func TestRemoveFriend_DropsEmptyPlayer(t *testing.T) {
-	g := gameWith(0)
-	mustOK(t, AddFriend(g, ivan))
-	mustOK(t, Join(g, maria))
-	mustOK(t, RemoveFriend(g, ivan))
+	game := gameWith(0)
+	mustOK(t, AddFriend(game, ivan))
+	mustOK(t, Join(game, maria))
+	mustOK(t, RemoveFriend(game, ivan))
 
-	if len(g.Players) != 1 || g.Players[0].UserID != maria.ID {
-		t.Fatalf("Иван без статуса и друзей должен уйти из списка: %+v", g.Players)
+	if len(game.Players) != 1 || game.Players[0].UserID != maria.ID {
+		t.Fatalf("Иван без статуса и друзей должен уйти из списка: %+v", game.Players)
 	}
 }
 
@@ -191,31 +191,31 @@ func TestTransition(t *testing.T) {
 		{12, 12, EventNone},
 		{5, 6, EventNone},
 	}
-	for _, c := range cases {
-		if got := Transition(c.before, c.after); got != c.want {
-			t.Errorf("Transition(%d, %d) = %d, ожидалось %d", c.before, c.after, got, c.want)
+	for _, testCase := range cases {
+		if got := Transition(testCase.before, testCase.after); got != testCase.want {
+			t.Errorf("Transition(%d, %d) = %d, ожидалось %d", testCase.before, testCase.after, got, testCase.want)
 		}
 	}
 }
 
 func TestTransition_TwelveElevenTwelve(t *testing.T) {
-	g := gameWith(Limit - 1)
+	game := gameWith(Limit - 1)
 
-	before := Count(g)
-	mustOK(t, Join(g, maria))
-	if ev := Transition(before, Count(g)); ev != EventFilled {
-		t.Fatalf("11 → 12: ожидалось EventFilled, получено %d", ev)
+	before := Count(game)
+	mustOK(t, Join(game, maria))
+	if event := Transition(before, Count(game)); event != EventFilled {
+		t.Fatalf("11 → 12: ожидалось EventFilled, получено %d", event)
 	}
 
-	before = Count(g)
-	mustOK(t, Decline(g, maria))
-	if ev := Transition(before, Count(g)); ev != EventOpened {
-		t.Fatalf("12 → 11: ожидалось EventOpened, получено %d", ev)
+	before = Count(game)
+	mustOK(t, Decline(game, maria))
+	if event := Transition(before, Count(game)); event != EventOpened {
+		t.Fatalf("12 → 11: ожидалось EventOpened, получено %d", event)
 	}
 
-	before = Count(g)
-	mustOK(t, Join(g, maria))
-	if ev := Transition(before, Count(g)); ev != EventFilled {
-		t.Fatalf("11 → 12: ожидалось EventFilled, получено %d", ev)
+	before = Count(game)
+	mustOK(t, Join(game, maria))
+	if event := Transition(before, Count(game)); event != EventFilled {
+		t.Fatalf("11 → 12: ожидалось EventFilled, получено %d", event)
 	}
 }

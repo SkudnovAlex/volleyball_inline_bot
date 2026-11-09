@@ -47,10 +47,10 @@ func Load() (*Config, error) {
 		return nil, fmt.Errorf("некорректный TELEGRAM_CHAT_ID: %w", err)
 	}
 
-	tzName := getenvDefault("TIMEZONE", defaultTimezone)
-	loc, err := time.LoadLocation(tzName)
+	timezoneName := getenvDefault("TIMEZONE", defaultTimezone)
+	location, err := time.LoadLocation(timezoneName)
 	if err != nil {
-		return nil, fmt.Errorf("некорректный TIMEZONE %q: %w", tzName, err)
+		return nil, fmt.Errorf("некорректный TIMEZONE %q: %w", timezoneName, err)
 	}
 
 	gameDays, err := parseGameDays(getenvDefault("GAME_DAYS", defaultGameDays))
@@ -69,7 +69,7 @@ func Load() (*Config, error) {
 		StorePath:       getenvDefault("STORE_PATH", defaultStorePath),
 		Schedule:        getenvDefault("CRON_SCHEDULE", defaultSchedule),
 		CleanupSchedule: getenvDefault("CLEANUP_SCHEDULE", defaultCleanupSchedule),
-		Location:        loc,
+		Location:        location,
 		GameDays:        gameDays,
 		DeleteAfterDays: deleteAfterDays,
 	}, nil
@@ -77,18 +77,18 @@ func Load() (*Config, error) {
 
 // parseGameDays разбирает список игровых дней вида "Tuesday,Thursday"
 // (англ. названия, регистр не важен) в map[time.Weekday]bool.
-func parseGameDays(s string) (map[time.Weekday]bool, error) {
+func parseGameDays(list string) (map[time.Weekday]bool, error) {
 	result := make(map[time.Weekday]bool)
-	for _, part := range strings.Split(s, ",") {
+	for _, part := range strings.Split(list, ",") {
 		name := strings.ToLower(strings.TrimSpace(part))
 		if name == "" {
 			continue
 		}
-		wd, ok := weekdayByName[name]
+		weekday, ok := weekdayByName[name]
 		if !ok {
 			return nil, fmt.Errorf("неизвестный день недели %q", part)
 		}
-		result[wd] = true
+		result[weekday] = true
 	}
 	if len(result) == 0 {
 		return nil, fmt.Errorf("список игровых дней пуст")
