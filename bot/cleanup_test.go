@@ -20,8 +20,7 @@ func deletedIDs(requests []tgbotapi.Chattable) []int {
 	return result
 }
 
-// Сегодня в тестах 10.11.2026 (tuesday), срок удаления 14 дней:
-// удаляются игры с датой 27.10 и раньше.
+// Сегодня в тестах 10.11.2026 (tuesday), срок удаления 14 дней: удаляются игры с датой 27.10 и раньше.
 func TestCleanupGames(t *testing.T) {
 	data := storage.Data{BoardMessageID: testBoardID, Games: []storage.Game{
 		{Date: "2026-10-27", MessageID: 1, Finished: true, Announce: &storage.Announce{MessageID: 2}},

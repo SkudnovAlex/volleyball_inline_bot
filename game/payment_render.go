@@ -11,19 +11,18 @@ import (
 	"volleyball_inline_bot/storage"
 )
 
-// ActionPaid это кнопка «Перевёл» под сообщением оплаты.
+// ActionPaid это кнопка "Перевёл" под сообщением оплаты.
 const ActionPaid = "paid"
 
-// Debtor это человек из списка, который должен перевести плательщику
-// за себя и пришедших друзей.
+// Debtor это человек из списка, который должен перевести плательщику за себя и пришедших друзей.
 type Debtor struct {
 	UserID int64
 	Name   string // уже экранировано для HTML
 	People int    // за скольких платит
 }
 
-// Debtors возвращает должников по оплате в порядке списка: по каждому
-// человеку считаются его пришедшие строки, плательщик не включается.
+// Debtors возвращает должников по оплате в порядке списка: по каждому человеку считаются его пришедшие строки,
+// плательщик не включается.
 func Debtors(match *storage.Game) []Debtor {
 	payment := match.Payment
 	var debtors []Debtor
@@ -63,8 +62,8 @@ func PaidCount(match *storage.Game, debtors []Debtor) int {
 	return count
 }
 
-// RenderPayment возвращает текст сообщения оплаты в HTML и кнопку «Перевёл».
-// Должники упоминаются ссылкой tg://user, Telegram присылает им уведомление.
+// RenderPayment возвращает текст сообщения оплаты в HTML и кнопку "Перевёл". Должники упоминаются ссылкой tg://user,
+// Telegram присылает им уведомление.
 func RenderPayment(match *storage.Game) (string, *tgbotapi.InlineKeyboardMarkup) {
 	payment := match.Payment
 	debtors := Debtors(match)
@@ -95,8 +94,8 @@ func RenderPayment(match *storage.Game) (string, *tgbotapi.InlineKeyboardMarkup)
 	return strings.TrimRight(text.String(), "\n"), &keyboard
 }
 
-// MarkPaid ставит отметку перевода и возвращает сумму человека. Снять
-// отметку нельзя: повторное нажатие возвращает ошибку с текстом для окна.
+// MarkPaid ставит отметку перевода и возвращает сумму человека. Снять отметку нельзя: повторное нажатие возвращает
+// ошибку с текстом для окна.
 func MarkPaid(match *storage.Game, userID int64) (amount int, err error) {
 	if !IsPaid(match) {
 		return 0, fmt.Errorf("Пока никто не оформил оплату зала")

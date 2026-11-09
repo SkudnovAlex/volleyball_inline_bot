@@ -9,16 +9,12 @@ import (
 	"volleyball_inline_bot/storage"
 )
 
-// createDaysAhead задаёт, за сколько дней до игры создаётся её сообщение.
-const createDaysAhead = 7
-
-// CreateGame создаёт сообщение игры, если через createDaysAhead дней
-// игровой день и игры на эту дату ещё нет.
+// CreateGame создаёт сообщение игры, если через Settings.CreateDaysAhead дней игровой день и игры на эту дату ещё нет.
 func (s *Service) CreateGame() {
 	s.mutex.Lock()
 	defer s.mutex.Unlock()
 
-	gameDay := s.now().AddDate(0, 0, createDaysAhead)
+	gameDay := s.now().AddDate(0, 0, s.createDaysAhead)
 	date := gameDay.Format(game.DateLayout)
 	day := game.DayTitle(date)
 

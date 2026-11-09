@@ -3,8 +3,8 @@ package storage
 // Статусы игрока в Player.Status.
 const (
 	StatusNone     = ""         // нажимал только кнопки друзей
-	StatusGoing    = "going"    // нажал «Иду»
-	StatusDeclined = "declined" // нажал «Не смогу»
+	StatusGoing    = "going"    // нажал "Иду"
+	StatusDeclined = "declined" // нажал "Не смогу"
 )
 
 // Data хранит всё состояние бота.
@@ -32,7 +32,7 @@ type Player struct {
 	Friends int    `json:"friends"`
 }
 
-// Announce описывает последнее объявление «состав собран» или «освободилось место».
+// Announce описывает последнее объявление "состав собран" или "освободилось место".
 type Announce struct {
 	MessageID int   `json:"message_id"`
 	Full      bool  `json:"full"`
@@ -44,11 +44,11 @@ const (
 	StepCame    = "came"    // ждём, сколько было людей
 	StepAbsent  = "absent"  // ждём отметки неявки
 	StepTotal   = "total"   // ждём сумму и реквизиты
-	StepConfirm = "confirm" // ждём «Отправить в группу» или «Заново»
+	StepConfirm = "confirm" // ждём "Отправить в группу" или "Заново"
 )
 
-// Payment описывает оплату зала после игры. Поля кроме Draft заполняются,
-// когда плательщик отправил оплату в группу (RenterID не 0).
+// Payment описывает оплату зала после игры. Поля кроме Draft заполняются, когда плательщик отправил оплату в группу
+// (RenterID не 0).
 type Payment struct {
 	RenterID    int64    `json:"renter_id"`
 	RenterName  string   `json:"renter_name"`
@@ -74,8 +74,8 @@ type Draft struct {
 	StartedAt  int64    `json:"started_at"` // unix-время
 }
 
-// Store читает и пишет Data в JSON-файл. Конкурентный доступ не защищён:
-// вызывающий держит общий мьютекс на всё чтение, изменение и запись.
+// Store читает и пишет Data в JSON-файл. Конкурентный доступ не защищён: вызывающий держит общий мьютекс на всё чтение,
+// изменение и запись.
 type Store struct {
 	path string
 }

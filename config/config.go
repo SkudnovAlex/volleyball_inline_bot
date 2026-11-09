@@ -8,8 +8,8 @@ import (
 	"strings"
 	"time"
 
-	// Встраиваем базу таймзон, чтобы time.LoadLocation работал
-	// независимо от наличия zoneinfo в ОС (минимальные Docker-образы, Windows).
+	// Встраиваем базу таймзон, чтобы time.LoadLocation работал независимо от наличия zoneinfo в ОС (минимальные
+	// Docker-образы, Windows).
 	_ "time/tzdata"
 
 	"github.com/joho/godotenv"
@@ -26,7 +26,8 @@ var weekdayByName = map[string]time.Weekday{
 	"saturday":  time.Saturday,
 }
 
-// Load читает конфигурацию из .env (если есть) и переменных окружения.
+// Load читает конфигурацию из .env (если есть) и переменных окружения. Незаданные необязательные переменные получают
+// значения по умолчанию из constants.go, некорректные значения дают ошибку с именем переменной.
 func Load() (*Config, error) {
 	// .env не обязателен: если файла нет, читаем переменные из реального окружения.
 	if err := godotenv.Load(); err != nil {
@@ -58,25 +59,58 @@ func Load() (*Config, error) {
 		return nil, fmt.Errorf("некорректный GAME_DAYS: %w", err)
 	}
 
-	deleteAfterDays, err := strconv.Atoi(getenvDefault("DELETE_AFTER_DAYS", defaultDeleteAfterDays))
-	if err != nil || deleteAfterDays < 1 {
-		return nil, fmt.Errorf("некорректный DELETE_AFTER_DAYS: нужно целое число дней больше нуля")
+	gameTime := getenvDefault("GAME_TIME", defaultGameTime)
+	if _, err := time.Parse("15:04", gameTime); err != nil {
+		return nil, fmt.Errorf("некорректный GAME_TIME %q: нужен формат ЧЧ:ММ, например 19:00", gameTime)
 	}
 
-	return &Config{
-		BotToken:        token,
-		ChatID:          chatID,
-		StorePath:       getenvDefault("STORE_PATH", defaultStorePath),
-		Schedule:        getenvDefault("CRON_SCHEDULE", defaultSchedule),
-		CleanupSchedule: getenvDefault("CLEANUP_SCHEDULE", defaultCleanupSchedule),
-		Location:        location,
-		GameDays:        gameDays,
-		DeleteAfterDays: deleteAfterDays,
-	}, nil
+	settings := &Config{
+		BotToken:           token,
+		ChatID:             chatID,
+		StorePath:          getenvDefault("STORE_PATH", defaultStorePath),
+		Schedule:           getenvDefault("CRON_SCHEDULE", defaultSchedule),
+		CleanupSchedule:    getenvDefault("CLEANUP_SCHEDULE", defaultCleanupSchedule),
+		BoardCheckSchedule: getenvDefault("BOARD_CHECK_SCHEDULE", defaultBoardCheckSchedule),
+		Location:           location,
+		GameDays:           gameDays,
+		GameTime:           gameTime,
+	}
+
+	numbers := []struct {
+		key      string
+		fallback string
+		target   *int
+	}{
+		{"DELETE_AFTER_DAYS", defaultDeleteAfterDays, &settings.DeleteAfterDays},
+		{"CREATE_DAYS_AHEAD", defaultCreateDaysAhead, &settings.CreateDaysAhead},
+		{"PLAYERS_LIMIT", defaultPlayersLimit, &settings.PlayersLimit},
+		{"MAX_FRIENDS", defaultMaxFriends, &settings.MaxFriends},
+		{"PAYMENT_MAX_CAME", defaultPaymentMaxCame, &settings.PaymentMaxCame},
+		{"PAYMENT_MIN_TOTAL", defaultPaymentMinTotal, &settings.PaymentMinTotal},
+		{"PAYMENT_MAX_TOTAL", defaultPaymentMaxTotal, &settings.PaymentMaxTotal},
+		{"PAYMENT_ROUND_TO", defaultPaymentRoundTo, &settings.PaymentRoundTo},
+	}
+	for _, number := range numbers {
+		if *number.target, err = positiveInt(number.key, number.fallback); err != nil {
+			return nil, err
+		}
+	}
+	if settings.PaymentMinTotal >= settings.PaymentMaxTotal {
+		return nil, fmt.Errorf("PAYMENT_MIN_TOTAL (%d) должен быть меньше PAYMENT_MAX_TOTAL (%d)",
+			settings.PaymentMinTotal, settings.PaymentMaxTotal)
+	}
+
+	if settings.AnnounceCooldown, err = positiveDuration("ANNOUNCE_COOLDOWN", defaultAnnounceCooldown); err != nil {
+		return nil, err
+	}
+	if settings.PaymentDraftLock, err = positiveDuration("PAYMENT_DRAFT_LOCK", defaultPaymentDraftLock); err != nil {
+		return nil, err
+	}
+	return settings, nil
 }
 
-// parseGameDays разбирает список игровых дней вида "Tuesday,Thursday"
-// (англ. названия, регистр не важен) в map[time.Weekday]bool.
+// parseGameDays разбирает список игровых дней вида "Tuesday,Thursday" (англ. названия, регистр не важен) в
+// map[time.Weekday]bool.
 func parseGameDays(list string) (map[time.Weekday]bool, error) {
 	result := make(map[time.Weekday]bool)
 	for _, part := range strings.Split(list, ",") {
@@ -96,9 +130,27 @@ func parseGameDays(list string) (map[time.Weekday]bool, error) {
 	return result, nil
 }
 
+// positiveInt читает целое число больше нуля.
+func positiveInt(key, fallback string) (int, error) {
+	value, err := strconv.Atoi(getenvDefault(key, fallback))
+	if err != nil || value < 1 {
+		return 0, fmt.Errorf("некорректный %s: нужно целое число больше нуля", key)
+	}
+	return value, nil
+}
+
+// positiveDuration читает длительность больше нуля в формате Go: 90s, 10m, 1h.
+func positiveDuration(key, fallback string) (time.Duration, error) {
+	value, err := time.ParseDuration(getenvDefault(key, fallback))
+	if err != nil || value <= 0 {
+		return 0, fmt.Errorf("некорректный %s: нужна длительность больше нуля, например 10m или 1h", key)
+	}
+	return value, nil
+}
+
 func getenvDefault(key, fallback string) string {
-	if v := os.Getenv(key); v != "" {
-		return v
+	if value := os.Getenv(key); value != "" {
+		return value
 	}
 	return fallback
 }

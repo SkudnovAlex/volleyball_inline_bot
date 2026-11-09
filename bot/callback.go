@@ -14,8 +14,7 @@ import (
 // textClosed показывается при нажатии на прошедшую или неизвестную игру.
 const textClosed = "Запись на эту игру закрыта"
 
-// HandleUpdate разбирает апдейт: нажатия в группе, нажатия и сообщения
-// в личке с ботом. Остальное пропускается.
+// HandleUpdate разбирает апдейт: нажатия в группе, нажатия и сообщения в личке с ботом. Остальное пропускается.
 func (s *Service) HandleUpdate(update tgbotapi.Update) {
 	switch {
 	case update.CallbackQuery != nil && isPrivate(update.CallbackQuery.Message):
@@ -104,8 +103,7 @@ func applyAction(match *storage.Game, action string, user game.User) error {
 	}
 }
 
-// editGame перерисовывает сообщение игры по текущим данным.
-// Возвращает false, если сообщения игры больше нет в чате.
+// editGame перерисовывает сообщение игры по текущим данным. Возвращает false, если сообщения игры больше нет в чате.
 func (s *Service) editGame(match *storage.Game) bool {
 	text, keyboard := game.RenderGame(match)
 	edit := tgbotapi.NewEditMessageText(s.chatID, match.MessageID, text)
@@ -122,7 +120,7 @@ func (s *Service) editGame(match *storage.Game) bool {
 	return true
 }
 
-// answer закрывает «часики» на кнопке, text показывается коротким уведомлением.
+// answer закрывает "часики" на кнопке, text показывается коротким уведомлением.
 func (s *Service) answer(queryID, text string) {
 	if _, err := s.sender.Request(tgbotapi.NewCallback(queryID, text)); err != nil {
 		log.Printf("Не удалось ответить на нажатие: %v", err)
@@ -145,8 +143,7 @@ func displayName(user *tgbotapi.User) string {
 	return name
 }
 
-// isNotModified сообщает, что Telegram отказался редактировать сообщение,
-// потому что текст и кнопки не изменились.
+// isNotModified сообщает, что Telegram отказался редактировать сообщение, потому что текст и кнопки не изменились.
 func isNotModified(err error) bool {
 	var telegramError *tgbotapi.Error
 	return errors.As(err, &telegramError) && strings.Contains(telegramError.Message, "message is not modified")

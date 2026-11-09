@@ -98,7 +98,7 @@ func TestRenderGame_Open(t *testing.T) {
 }
 
 func TestRenderGame_Full(t *testing.T) {
-	game := gameWith(Limit)
+	game := gameWith(rules.Limit)
 	game.Date = "2026-11-17"
 
 	text, keyboard := RenderGame(game)

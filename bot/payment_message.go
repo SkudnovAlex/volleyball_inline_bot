@@ -10,9 +10,8 @@ import (
 	"volleyball_inline_bot/storage"
 )
 
-// sendPaymentMessage публикует сообщение оплаты ответом на сообщение игры.
-// Прошлое сообщение оплаты этой игры, если оно было, удаляется.
-// Вызывается под mutex после сохранения оплаты.
+// sendPaymentMessage публикует сообщение оплаты ответом на сообщение игры. Прошлое сообщение оплаты этой игры, если оно
+// было, удаляется. Вызывается под mutex после сохранения оплаты.
 func (s *Service) sendPaymentMessage(data *storage.Data, match *storage.Game) {
 	payment := match.Payment
 	if payment.MessageID != 0 {
@@ -38,7 +37,7 @@ func (s *Service) sendPaymentMessage(data *storage.Data, match *storage.Game) {
 	}
 }
 
-// markPaid обрабатывает «Перевёл» под сообщением оплаты. Вызывается под mutex.
+// markPaid обрабатывает "Перевёл" под сообщением оплаты. Вызывается под mutex.
 func (s *Service) markPaid(query *tgbotapi.CallbackQuery, data *storage.Data, match *storage.Game) {
 	amount, err := game.MarkPaid(match, query.From.ID)
 	if err != nil {
@@ -53,8 +52,8 @@ func (s *Service) markPaid(query *tgbotapi.CallbackQuery, data *storage.Data, ma
 	s.answer(query.ID, fmt.Sprintf("Отмечено: ты перевёл %d ₽", amount))
 }
 
-// editPaymentMessage перерисовывает сообщение оплаты по текущим данным.
-// Возвращает false, если сообщения оплаты больше нет в чате.
+// editPaymentMessage перерисовывает сообщение оплаты по текущим данным. Возвращает false, если сообщения оплаты больше
+// нет в чате.
 func (s *Service) editPaymentMessage(match *storage.Game) bool {
 	if match.Payment == nil || match.Payment.MessageID == 0 {
 		return true

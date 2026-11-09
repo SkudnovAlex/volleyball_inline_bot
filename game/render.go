@@ -11,9 +11,6 @@ import (
 	"volleyball_inline_bot/storage"
 )
 
-// GameHour задаёт час начала игры.
-const GameHour = 19
-
 // DateLayout задаёт формат storage.Game.Date.
 const DateLayout = "2006-01-02"
 
@@ -41,8 +38,7 @@ const (
 	barFree  = "▱"
 )
 
-// RenderGame возвращает текст сообщения игры в HTML и клавиатуру.
-// У прошедшей игры одна кнопка «Я оплатил зал».
+// RenderGame возвращает текст сообщения игры в HTML и клавиатуру. У прошедшей игры одна кнопка "Я оплатил зал".
 func RenderGame(game *storage.Game) (string, *tgbotapi.InlineKeyboardMarkup) {
 	var text strings.Builder
 	count := Count(game)
@@ -51,12 +47,12 @@ func RenderGame(game *storage.Game) (string, *tgbotapi.InlineKeyboardMarkup) {
 		fmt.Fprintf(&text, "🏐 <b>%s · игра прошла</b>\n", DayTitle(game.Date))
 		fmt.Fprintf(&text, "Было человек: %d\n", Attended(game))
 	} else {
-		fmt.Fprintf(&text, "🏐 <b>%s · %d:00</b>\n", DayTitle(game.Date), GameHour)
-		status := fmt.Sprintf("свободно %d", Limit-count)
-		if count >= Limit {
+		fmt.Fprintf(&text, "🏐 <b>%s · %s</b>\n", DayTitle(game.Date), rules.GameTime)
+		status := fmt.Sprintf("свободно %d", rules.Limit-count)
+		if count >= rules.Limit {
 			status = "состав собран"
 		}
-		fmt.Fprintf(&text, "%s %d/%d · %s\n", progressBar(count), count, Limit, status)
+		fmt.Fprintf(&text, "%s %d/%d · %s\n", progressBar(count), count, rules.Limit, status)
 	}
 
 	if lineup := lineupLines(game); len(lineup) > 0 {
@@ -76,8 +72,8 @@ func RenderGame(game *storage.Game) (string, *tgbotapi.InlineKeyboardMarkup) {
 	return strings.TrimRight(text.String(), "\n"), buildKeyboard(game, count)
 }
 
-// lineupLines возвращает пронумерованный состав. Друг того, кто идёт сам,
-// выводится под ним как «└ друг», иначе с именем приведшего.
+// lineupLines возвращает пронумерованный состав. Друг того, кто идёт сам, выводится под ним как "└ друг", иначе с именем
+// приведшего.
 func lineupLines(game *storage.Game) []string {
 	var absent []string
 	if IsPaid(game) {
@@ -102,10 +98,10 @@ func lineupLines(game *storage.Game) []string {
 	return lines
 }
 
-// progressBar рисует заполнение состава из Limit делений.
+// progressBar рисует заполнение состава из rules.Limit делений.
 func progressBar(count int) string {
-	taken := min(count, Limit)
-	return strings.Repeat(barTaken, taken) + strings.Repeat(barFree, Limit-taken)
+	taken := min(count, rules.Limit)
+	return strings.Repeat(barTaken, taken) + strings.Repeat(barFree, rules.Limit-taken)
 }
 
 // DayTitle превращает "2026-11-18" в "Вторник 18.11".
@@ -133,7 +129,7 @@ func buildKeyboard(game *storage.Game, count int) *tgbotapi.InlineKeyboardMarkup
 	)
 
 	var keyboard tgbotapi.InlineKeyboardMarkup
-	if count >= Limit {
+	if count >= rules.Limit {
 		keyboard = tgbotapi.NewInlineKeyboardMarkup(leave)
 	} else {
 		keyboard = tgbotapi.NewInlineKeyboardMarkup(

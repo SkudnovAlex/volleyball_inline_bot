@@ -1,7 +1,6 @@
 package game
 
 import (
-	"errors"
 	"fmt"
 	"html"
 	"slices"
@@ -11,24 +10,8 @@ import (
 	"volleyball_inline_bot/storage"
 )
 
-// Границы ввода при оформлении оплаты.
-const (
-	MinCame  = 1
-	MaxCame  = 40
-	MinTotal = 1000
-	MaxTotal = 50000
-	// roundTo задаёт шаг округления доли вверх, в рублях.
-	roundTo = 10
-)
-
-// ActionHall это кнопка «Я оплатил зал» в сообщении прошедшей игры.
+// ActionHall это кнопка "Я оплатил зал" в сообщении прошедшей игры.
 const ActionHall = "hall"
-
-// Ошибки ввода в личке. Текст отправляется пользователю.
-var (
-	ErrBadCame   = fmt.Errorf("Пришли число от %d до %d", MinCame, MaxCame)
-	ErrBadAmount = errors.New("Не понял сумму. Напиши её в конце строки числом от 1000 до 50 000, например: Т-Банк +7 900 123-45-67 5400")
-)
 
 // Line это строка состава: сам человек или один из его друзей.
 type Line struct {
@@ -62,8 +45,7 @@ func IsPaid(match *storage.Game) bool {
 	return match.Payment != nil && match.Payment.RenterID != 0
 }
 
-// Attended возвращает, сколько человек было на игре: после оплаты со слов
-// плательщика, до неё по списку.
+// Attended возвращает, сколько человек было на игре: после оплаты со слов плательщика, до неё по списку.
 func Attended(match *storage.Game) int {
 	if IsPaid(match) {
 		return match.Payment.Came
@@ -71,18 +53,17 @@ func Attended(match *storage.Game) int {
 	return Count(match)
 }
 
-// ParseCame разбирает ответ на вопрос «сколько человек было».
+// ParseCame разбирает ответ на вопрос "сколько человек было".
 func ParseCame(text string) (int, error) {
 	came, err := strconv.Atoi(strings.TrimSpace(text))
-	if err != nil || came < MinCame || came > MaxCame {
+	if err != nil || came < MinCame || came > rules.MaxCame {
 		return 0, ErrBadCame
 	}
 	return came, nil
 }
 
-// ParseAmount разбирает строку «<реквизиты> <сумма>». Сумма это последнее
-// слово строки, допустим суффикс «₽» или «р». Реквизиты могут быть пустыми,
-// если прислана одна сумма.
+// ParseAmount разбирает строку "<реквизиты> <сумма>". Сумма это последнее слово строки, допустим суффикс "₽" или "р".
+// Реквизиты могут быть пустыми, если прислана одна сумма.
 func ParseAmount(text string) (requisites string, total int, err error) {
 	text = strings.TrimSpace(text)
 	cut := strings.LastIndexAny(text, " \t\n")
@@ -90,7 +71,7 @@ func ParseAmount(text string) (requisites string, total int, err error) {
 	last = strings.TrimSuffix(strings.TrimSuffix(last, "₽"), "р")
 
 	total, err = strconv.Atoi(last)
-	if err != nil || total < MinTotal || total > MaxTotal {
+	if err != nil || total < rules.MinTotal || total > rules.MaxTotal {
 		return "", 0, ErrBadAmount
 	}
 	if cut < 0 {
@@ -99,10 +80,10 @@ func ParseAmount(text string) (requisites string, total int, err error) {
 	return strings.TrimSpace(text[:cut]), total, nil
 }
 
-// PerPerson делит сумму на пришедших с округлением вверх до roundTo рублей.
+// PerPerson делит сумму на пришедших с округлением вверх до rules.RoundTo рублей.
 func PerPerson(total, came int) int {
 	perPerson := (total + came - 1) / came
-	return (perPerson + roundTo - 1) / roundTo * roundTo
+	return (perPerson + rules.RoundTo - 1) / rules.RoundTo * rules.RoundTo
 }
 
 // IsAbsent сообщает, отмечена ли строка состава как неявка.

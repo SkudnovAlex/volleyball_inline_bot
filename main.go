@@ -7,15 +7,13 @@ import (
 
 	"volleyball_inline_bot/bot"
 	"volleyball_inline_bot/config"
+	"volleyball_inline_bot/game"
 	"volleyball_inline_bot/scheduler"
 	"volleyball_inline_bot/storage"
 )
 
 // updatesTimeout задаёт длительность long polling запроса getUpdates в секундах.
 const updatesTimeout = 60
-
-// boardCheckSchedule задаёт проверку закрепа доски (каждый час).
-const boardCheckSchedule = "0 * * * *"
 
 func main() {
 	settings, err := config.Load()
@@ -29,35 +27,54 @@ func main() {
 	}
 	log.Printf("Бот @%s запущен", botAPI.Self.UserName)
 
+	game.Configure(game.Rules{
+		GameTime:   settings.GameTime,
+		Limit:      settings.PlayersLimit,
+		MaxFriends: settings.MaxFriends,
+		MaxCame:    settings.PaymentMaxCame,
+		MinTotal:   settings.PaymentMinTotal,
+		MaxTotal:   settings.PaymentMaxTotal,
+		RoundTo:    settings.PaymentRoundTo,
+	})
 	store := storage.NewStore(settings.StorePath)
 	service := bot.New(botAPI, store, bot.Settings{
-		ChatID:          settings.ChatID,
-		Location:        settings.Location,
-		GameDays:        settings.GameDays,
-		DeleteAfterDays: settings.DeleteAfterDays,
-		BotUserName:     botAPI.Self.UserName,
+		ChatID:           settings.ChatID,
+		Location:         settings.Location,
+		GameDays:         settings.GameDays,
+		DeleteAfterDays:  settings.DeleteAfterDays,
+		CreateDaysAhead:  settings.CreateDaysAhead,
+		AnnounceCooldown: settings.AnnounceCooldown,
+		DraftLock:        settings.PaymentDraftLock,
+		BotUserName:      botAPI.Self.UserName,
 	})
-	// При старте сразу выполняем задачи расписания: бот мог быть выключен
-	// в момент их запуска. Затем перерисовываем сообщения игр (оформление
-	// могло измениться с обновлением бота) и доску.
+
+	// Расписания проверяются до первых действий в чате: при ошибке бот завершается, ничего не отправив.
+	planner := scheduler.New(settings.Location)
+	jobs := []struct {
+		key      string
+		schedule string
+		job      func()
+	}{
+		{"CRON_SCHEDULE", settings.Schedule, service.CreateGame},
+		{"CLEANUP_SCHEDULE", settings.CleanupSchedule, service.CleanupGames},
+		{"BOARD_CHECK_SCHEDULE", settings.BoardCheckSchedule, service.RefreshBoard},
+	}
+	for _, job := range jobs {
+		if err := scheduler.Add(planner, job.schedule, job.job); err != nil {
+			log.Fatalf("Ошибка в %s %q: %v", job.key, job.schedule, err)
+		}
+	}
+
+	// При старте сразу выполняем задачи расписания: бот мог быть выключен в момент их запуска. Затем перерисовываем
+	// сообщения игр (оформление могло измениться с обновлением бота) и доску.
 	service.CleanupGames()
 	service.CreateGame()
 	service.RedrawGames()
 	service.RefreshBoard()
 
-	planner := scheduler.New(settings.Location)
-	if err := scheduler.Add(planner, settings.Schedule, service.CreateGame); err != nil {
-		log.Fatalf("Ошибка в CRON_SCHEDULE %q: %v", settings.Schedule, err)
-	}
-	if err := scheduler.Add(planner, settings.CleanupSchedule, service.CleanupGames); err != nil {
-		log.Fatalf("Ошибка в CLEANUP_SCHEDULE %q: %v", settings.CleanupSchedule, err)
-	}
-	if err := scheduler.Add(planner, boardCheckSchedule, service.RefreshBoard); err != nil {
-		log.Fatalf("Ошибка в расписании проверки доски: %v", err)
-	}
 	planner.Start()
-	log.Printf("Планировщик запущен (создание: %q, очистка: %q, зона: %s, удаление через %d дн.)",
-		settings.Schedule, settings.CleanupSchedule, settings.Location, settings.DeleteAfterDays)
+	log.Printf("Планировщик запущен (создание: %q, очистка: %q, доска: %q, зона: %s)",
+		settings.Schedule, settings.CleanupSchedule, settings.BoardCheckSchedule, settings.Location)
 
 	updatesConfig := tgbotapi.NewUpdate(0)
 	updatesConfig.Timeout = updatesTimeout

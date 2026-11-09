@@ -12,9 +12,8 @@ import (
 	"volleyball_inline_bot/storage"
 )
 
-// RefreshBoard отправляет сообщения игр, у которых их ещё нет, затем
-// обновляет доску и проверяет, что она закреплена. Вызывается при старте
-// бота и по расписанию раз в час.
+// RefreshBoard отправляет сообщения игр, у которых их ещё нет, затем обновляет доску и проверяет, что она закреплена.
+// Вызывается при старте бота и по расписанию раз в час.
 func (s *Service) RefreshBoard() {
 	s.mutex.Lock()
 	defer s.mutex.Unlock()
@@ -33,10 +32,9 @@ func (s *Service) RefreshBoard() {
 	s.updateBoardAndSave(&data)
 }
 
-// RedrawGames перерисовывает сообщения всех игр и оплат по текущим данным.
-// Вызывается при старте, чтобы после обновления бота сообщения в чате
-// получили новое оформление. Если сообщение удалили из чата, бот забывает
-// его номер, и RefreshBoard отправляет его заново.
+// RedrawGames перерисовывает сообщения всех игр и оплат по текущим данным. Вызывается при старте, чтобы после обновления
+// бота сообщения в чате получили новое оформление. Если сообщение удалили из чата, бот забывает его номер, и
+// RefreshBoard отправляет его заново.
 func (s *Service) RedrawGames() {
 	s.mutex.Lock()
 	defer s.mutex.Unlock()
@@ -55,8 +53,8 @@ func (s *Service) RedrawGames() {
 		if !s.editGame(match) {
 			log.Printf("Сообщение игры %s удалено из чата, отправлю заново", match.Date)
 			match.MessageID = 0
-			// Сообщение оплаты отвечает на сообщение игры, поэтому
-			// переотправляется вместе с ней. Старое, если осталось, удаляем.
+			// Сообщение оплаты отвечает на сообщение игры, поэтому переотправляется вместе с ней. Старое, если осталось,
+			// удаляем.
 			if match.Payment != nil && match.Payment.MessageID != 0 {
 				s.sender.Request(tgbotapi.NewDeleteMessage(s.chatID, match.Payment.MessageID))
 				match.Payment.MessageID = 0
@@ -78,10 +76,8 @@ func (s *Service) RedrawGames() {
 	}
 }
 
-// sendMissingGames отправляет сообщения для игр с message_id 0 и сообщения
-// оплаты для оплаченных игр без него: так игру можно добавить или
-// восстановить, вписав её в файл данных вручную. Возвращает true,
-// если что-то отправлено.
+// sendMissingGames отправляет сообщения для игр с message_id 0 и сообщения оплаты для оплаченных игр без него: так игру
+// можно добавить или восстановить, вписав её в файл данных вручную. Возвращает true, если что-то отправлено.
 func (s *Service) sendMissingGames(data *storage.Data) bool {
 	sent := false
 	for index := range data.Games {
@@ -125,8 +121,7 @@ func (s *Service) sendMissingGames(data *storage.Data) bool {
 	return sent
 }
 
-// updateBoardAndSave обновляет доску по уже сохранённым данным и, если
-// пришлось отправить новую доску, сохраняет её ID.
+// updateBoardAndSave обновляет доску по уже сохранённым данным и, если пришлось отправить новую доску, сохраняет её ID.
 func (s *Service) updateBoardAndSave(data *storage.Data) {
 	previousID := data.BoardMessageID
 	s.updateBoard(data)
@@ -138,8 +133,8 @@ func (s *Service) updateBoardAndSave(data *storage.Data) {
 	}
 }
 
-// updateBoard редактирует доску или отправляет новую, если её ещё нет
-// или её удалили, и закрепляет её. Новый ID записывается в data.
+// updateBoard редактирует доску или отправляет новую, если её ещё нет или её удалили, и закрепляет её. Новый ID
+// записывается в data.
 func (s *Service) updateBoard(data *storage.Data) {
 	text := game.RenderBoard(data.Games, s.chatID)
 
@@ -173,8 +168,8 @@ func (s *Service) updateBoard(data *storage.Data) {
 	s.pin(sentMessage.MessageID)
 }
 
-// ensurePinned закрепляет доску, если последним закреплённым сообщением
-// чата сейчас не она: Telegram не сообщает боту об откреплении.
+// ensurePinned закрепляет доску, если последним закреплённым сообщением чата сейчас не она: Telegram не сообщает боту об
+// откреплении.
 func (s *Service) ensurePinned(boardMessageID int) {
 	response, err := s.sender.Request(tgbotapi.ChatInfoConfig{ChatConfig: tgbotapi.ChatConfig{ChatID: s.chatID}})
 	if err != nil {

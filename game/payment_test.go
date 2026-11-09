@@ -33,12 +33,12 @@ func TestLines(t *testing.T) {
 }
 
 func TestParseCame(t *testing.T) {
-	for _, text := range []string{"10", " 1 ", "40"} {
+	for _, text := range []string{"10", " 1 ", "30"} {
 		if _, err := ParseCame(text); err != nil {
 			t.Errorf("ParseCame(%q): неожиданная ошибка %v", text, err)
 		}
 	}
-	for _, text := range []string{"0", "41", "десять", "", "10 человек"} {
+	for _, text := range []string{"0", "31", "десять", "", "10 человек"} {
 		if _, err := ParseCame(text); !errors.Is(err, ErrBadCame) {
 			t.Errorf("ParseCame(%q): ожидалась ErrBadCame, получено %v", text, err)
 		}
@@ -65,7 +65,7 @@ func TestParseAmount(t *testing.T) {
 		}
 	}
 
-	for _, text := range []string{"Т-Банк 5 400", "Т-Банк +7 900 123-45-67", "999", "50001", "", "Т-Банк"} {
+	for _, text := range []string{"Т-Банк 5 400", "Т-Банк +7 900 123-45-67", "999", "10001", "", "Т-Банк"} {
 		if _, _, err := ParseAmount(text); !errors.Is(err, ErrBadAmount) {
 			t.Errorf("ParseAmount(%q): ожидалась ErrBadAmount, получено %v", text, err)
 		}

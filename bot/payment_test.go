@@ -12,8 +12,7 @@ import (
 
 var ivan = &tgbotapi.User{ID: 7, FirstName: "Иван"}
 
-// finishedGame возвращает данные с прошедшей игрой 09.11:
-// Мария, Сергей с другом, Иван. В списке 4 строки.
+// finishedGame возвращает данные с прошедшей игрой 09.11: Мария, Сергей с другом, Иван. В списке 4 строки.
 func finishedGame() storage.Data {
 	return storage.Data{
 		BoardMessageID: testBoardID,
@@ -130,7 +129,7 @@ func TestPayment_FullFlowWithAbsent(t *testing.T) {
 	}
 
 	service.HandlePrivateMessage(write(ivan, "много"))
-	if text := lastPrivate(t, sender).Text; text != "Пришли число от 1 до 40" {
+	if text := lastPrivate(t, sender).Text; text != "Пришли число от 1 до 30" {
 		t.Fatalf("ошибка ввода числа: %q", text)
 	}
 
@@ -313,8 +312,7 @@ func TestHandleUpdate_RoutesPrivate(t *testing.T) {
 	}
 }
 
-// confirmedDraft возвращает прошедшую игру, где Иван дошёл до проверки:
-// было 4, 4000 ₽, реквизиты «Сбер 8900».
+// confirmedDraft возвращает прошедшую игру, где Иван дошёл до проверки: было 4, 4000 ₽, реквизиты "Сбер 8900".
 func confirmedDraft() storage.Data {
 	data := finishedGame()
 	data.Games[0].Payment = &storage.Payment{Draft: &storage.Draft{

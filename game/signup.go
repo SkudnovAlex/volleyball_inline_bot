@@ -2,16 +2,8 @@ package game
 
 import (
 	"errors"
-	"fmt"
 
 	"volleyball_inline_bot/storage"
-)
-
-const (
-	// Limit задаёт, сколько человек нужно на игру.
-	Limit = 12
-	// MaxFriends задаёт, сколько друзей может привести один человек.
-	MaxFriends = 4
 )
 
 // Ошибки действий. Текст показывается пользователю во всплывающем окне.
@@ -19,7 +11,6 @@ var (
 	ErrAlreadyGoing   = errors.New("Ты уже в списке")
 	ErrAlreadyDecline = errors.New("Уже отмечено, что ты не сможешь")
 	ErrNoPlaces       = errors.New("Мест нет")
-	ErrTooManyFriends = fmt.Errorf("Можно привести не больше %d друзей", MaxFriends)
 	ErrNoFriends      = errors.New("У тебя нет записанных друзей")
 )
 
@@ -29,13 +20,13 @@ type User struct {
 	Name string
 }
 
-// Event описывает переход счёта через Limit.
+// Event описывает переход счёта через rules.Limit.
 type Event int
 
 const (
 	EventNone   Event = iota
-	EventFilled       // набралось Limit
-	EventOpened       // было Limit, стало меньше
+	EventFilled       // набралось rules.Limit
+	EventOpened       // было rules.Limit, стало меньше
 )
 
 // Count возвращает число идущих: записавшиеся сами плюс все друзья.
@@ -52,11 +43,11 @@ func Count(game *storage.Game) int {
 
 // Free возвращает число свободных мест.
 func Free(game *storage.Game) int {
-	return Limit - Count(game)
+	return rules.Limit - Count(game)
 }
 
-// Join записывает пользователя на игру. Человек, который раньше нажал
-// «Не смогу» или записывал только друзей, остаётся на своём месте в списке.
+// Join записывает пользователя на игру. Человек, который раньше нажал "Не смогу" или записывал только друзей, остаётся
+// на своём месте в списке.
 func Join(game *storage.Game, user User) error {
 	player := find(game, user)
 	if player != nil && player.Status == storage.StatusGoing {
@@ -88,7 +79,7 @@ func Decline(game *storage.Game, user User) error {
 // AddFriend записывает ещё одного друга пользователя.
 func AddFriend(game *storage.Game, user User) error {
 	player := find(game, user)
-	if player != nil && player.Friends >= MaxFriends {
+	if player != nil && player.Friends >= rules.MaxFriends {
 		return ErrTooManyFriends
 	}
 	if Free(game) < 1 {
@@ -101,8 +92,8 @@ func AddFriend(game *storage.Game, user User) error {
 	return nil
 }
 
-// RemoveFriend убирает одного друга пользователя. Если у человека
-// не осталось ни друзей, ни статуса, он убирается из списка.
+// RemoveFriend убирает одного друга пользователя. Если у человека не осталось ни друзей, ни статуса, он убирается из
+// списка.
 func RemoveFriend(game *storage.Game, user User) error {
 	player := find(game, user)
 	if player == nil || player.Friends == 0 {
@@ -118,9 +109,9 @@ func RemoveFriend(game *storage.Game, user User) error {
 // Transition сравнивает счёт до и после действия.
 func Transition(before, after int) Event {
 	switch {
-	case before < Limit && after >= Limit:
+	case before < rules.Limit && after >= rules.Limit:
 		return EventFilled
-	case before >= Limit && after < Limit:
+	case before >= rules.Limit && after < rules.Limit:
 		return EventOpened
 	default:
 		return EventNone

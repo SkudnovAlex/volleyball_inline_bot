@@ -1,6 +1,7 @@
 package config
 
 import (
+	"strings"
 	"testing"
 	"time"
 )
@@ -149,6 +150,85 @@ func TestLoad_BadDeleteAfterDays(t *testing.T) {
 
 		if _, err := Load(); err == nil {
 			t.Errorf("DELETE_AFTER_DAYS=%q: ожидалась ошибка", value)
+		}
+	}
+}
+
+// newVariables перечисляет переменные правил и расписаний, чтобы тесты не зависели от окружения машины.
+var newVariables = []string{
+	"GAME_TIME", "CREATE_DAYS_AHEAD", "PLAYERS_LIMIT", "MAX_FRIENDS", "ANNOUNCE_COOLDOWN", "PAYMENT_DRAFT_LOCK",
+	"PAYMENT_MAX_CAME", "PAYMENT_MIN_TOTAL", "PAYMENT_MAX_TOTAL", "PAYMENT_ROUND_TO", "BOARD_CHECK_SCHEDULE",
+}
+
+func setRequired(t *testing.T) {
+	t.Helper()
+	t.Setenv("TELEGRAM_BOT_TOKEN", "t")
+	t.Setenv("TELEGRAM_CHAT_ID", "42")
+	for _, key := range newVariables {
+		t.Setenv(key, "")
+	}
+}
+
+func TestLoad_RulesDefaults(t *testing.T) {
+	setRequired(t)
+
+	settings, err := Load()
+	if err != nil {
+		t.Fatalf("неожиданная ошибка: %v", err)
+	}
+	if settings.GameTime != "19:00" || settings.CreateDaysAhead != 7 || settings.PlayersLimit != 12 ||
+		settings.MaxFriends != 4 || settings.AnnounceCooldown != 10*time.Minute || settings.PaymentDraftLock != time.Hour ||
+		settings.PaymentMaxCame != 30 || settings.PaymentMinTotal != 1000 || settings.PaymentMaxTotal != 10000 ||
+		settings.PaymentRoundTo != 10 || settings.BoardCheckSchedule != "0 * * * *" {
+		t.Fatalf("значения по умолчанию: %+v", settings)
+	}
+}
+
+func TestLoad_RulesOverride(t *testing.T) {
+	setRequired(t)
+	values := map[string]string{
+		"GAME_TIME": "20:30", "CREATE_DAYS_AHEAD": "5", "PLAYERS_LIMIT": "14", "MAX_FRIENDS": "2",
+		"ANNOUNCE_COOLDOWN": "90s", "PAYMENT_DRAFT_LOCK": "30m", "PAYMENT_MAX_CAME": "20",
+		"PAYMENT_MIN_TOTAL": "500", "PAYMENT_MAX_TOTAL": "8000", "PAYMENT_ROUND_TO": "50",
+		"BOARD_CHECK_SCHEDULE": "*/30 * * * *",
+	}
+	for key, value := range values {
+		t.Setenv(key, value)
+	}
+
+	settings, err := Load()
+	if err != nil {
+		t.Fatalf("неожиданная ошибка: %v", err)
+	}
+	if settings.GameTime != "20:30" || settings.CreateDaysAhead != 5 || settings.PlayersLimit != 14 ||
+		settings.MaxFriends != 2 || settings.AnnounceCooldown != 90*time.Second || settings.PaymentDraftLock != 30*time.Minute ||
+		settings.PaymentMaxCame != 20 || settings.PaymentMinTotal != 500 || settings.PaymentMaxTotal != 8000 ||
+		settings.PaymentRoundTo != 50 || settings.BoardCheckSchedule != "*/30 * * * *" {
+		t.Fatalf("значения из окружения: %+v", settings)
+	}
+}
+
+func TestLoad_RulesInvalid(t *testing.T) {
+	cases := []struct{ key, value string }{
+		{"GAME_TIME", "19"},
+		{"GAME_TIME", "25:00"},
+		{"CREATE_DAYS_AHEAD", "0"},
+		{"PLAYERS_LIMIT", "много"},
+		{"MAX_FRIENDS", "-1"},
+		{"ANNOUNCE_COOLDOWN", "10"},
+		{"ANNOUNCE_COOLDOWN", "0s"},
+		{"PAYMENT_DRAFT_LOCK", "час"},
+		{"PAYMENT_MAX_CAME", "0"},
+		{"PAYMENT_ROUND_TO", "0"},
+		{"PAYMENT_MIN_TOTAL", "20000"}, // больше максимума по умолчанию
+	}
+	for _, testCase := range cases {
+		setRequired(t)
+		t.Setenv(testCase.key, testCase.value)
+
+		_, err := Load()
+		if err == nil || !strings.Contains(err.Error(), testCase.key) {
+			t.Errorf("%s=%q: ожидалась ошибка с именем переменной, получено %v", testCase.key, testCase.value, err)
 		}
 	}
 }

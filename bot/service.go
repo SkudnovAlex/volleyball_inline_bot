@@ -9,8 +9,7 @@ import (
 	"volleyball_inline_bot/storage"
 )
 
-// Sender абстрагирует методы Telegram, нужные сервису.
-// Ему удовлетворяет *tgbotapi.BotAPI.
+// Sender абстрагирует методы Telegram, нужные сервису. Ему удовлетворяет *tgbotapi.BotAPI.
 type Sender interface {
 	Send(request tgbotapi.Chattable) (tgbotapi.Message, error)
 	Request(request tgbotapi.Chattable) (*tgbotapi.APIResponse, error)
@@ -29,32 +28,43 @@ type Settings struct {
 	GameDays map[time.Weekday]bool
 	// DeleteAfterDays задаёт, через сколько дней после игры удалить её сообщение.
 	DeleteAfterDays int
+	// CreateDaysAhead задаёт, за сколько дней до игры создаётся её сообщение.
+	CreateDaysAhead int
+	// AnnounceCooldown задаёт, сколько времени после объявления бот редактирует его вместо отправки нового.
+	AnnounceCooldown time.Duration
+	// DraftLock задаёт, сколько оформление оплаты одним человеком не даёт начать его другому.
+	DraftLock time.Duration
 	// BotUserName нужен для ссылки t.me/<бот>?start=... при переходе в личку.
 	BotUserName string
 }
 
-// Service содержит работу бота с чатом. Все публичные методы держат mutex
-// на всё чтение, изменение и запись данных: cron и нажатия кнопок
-// работают в разных горутинах.
+// Service содержит работу бота с чатом. Все публичные методы держат mutex на всё чтение, изменение и запись данных: cron
+// и нажатия кнопок работают в разных горутинах.
 type Service struct {
-	sender          Sender
-	repository      Repository
-	chatID          int64
-	gameDays        map[time.Weekday]bool
-	deleteAfterDays int
-	botUserName     string
-	now             func() time.Time
-	mutex           sync.Mutex
+	sender           Sender
+	repository       Repository
+	chatID           int64
+	gameDays         map[time.Weekday]bool
+	deleteAfterDays  int
+	createDaysAhead  int
+	announceCooldown time.Duration
+	draftLock        time.Duration
+	botUserName      string
+	now              func() time.Time
+	mutex            sync.Mutex
 }
 
 func New(sender Sender, repository Repository, settings Settings) *Service {
 	return &Service{
-		sender:          sender,
-		repository:      repository,
-		chatID:          settings.ChatID,
-		gameDays:        settings.GameDays,
-		deleteAfterDays: settings.DeleteAfterDays,
-		botUserName:     settings.BotUserName,
-		now:             func() time.Time { return time.Now().In(settings.Location) },
+		sender:           sender,
+		repository:       repository,
+		chatID:           settings.ChatID,
+		gameDays:         settings.GameDays,
+		deleteAfterDays:  settings.DeleteAfterDays,
+		createDaysAhead:  settings.CreateDaysAhead,
+		announceCooldown: settings.AnnounceCooldown,
+		draftLock:        settings.DraftLock,
+		botUserName:      settings.BotUserName,
+		now:              func() time.Time { return time.Now().In(settings.Location) },
 	}
 }

@@ -7,8 +7,8 @@ import (
 	"volleyball_inline_bot/storage"
 )
 
-// paidGame: Иван с другом оплатил 5400 ₽ на 9 человек. Сергей не пришёл, но его
-// друг был, Дмитрий привёл двоих, Мария уже перевела, двое новеньких.
+// paidGame: Иван с другом оплатил 5400 ₽ на 9 человек. Сергей не пришёл, но его друг был, Дмитрий привёл двоих, Мария
+// уже перевела, двое новеньких.
 func paidGame() *storage.Game {
 	return &storage.Game{Date: "2026-11-09", MessageID: 50, Finished: true,
 		Players: []storage.Player{

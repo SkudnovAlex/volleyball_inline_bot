@@ -40,8 +40,8 @@ func TestCount_GoingAndFriends(t *testing.T) {
 	if got := Count(game); got != 5 {
 		t.Fatalf("Count = %d, ожидалось 5 (1 + 1+1 + 0+2)", got)
 	}
-	if got := Free(game); got != Limit-5 {
-		t.Fatalf("Free = %d, ожидалось %d", got, Limit-5)
+	if got := Free(game); got != rules.Limit-5 {
+		t.Fatalf("Free = %d, ожидалось %d", got, rules.Limit-5)
 	}
 }
 
@@ -58,11 +58,11 @@ func TestJoin(t *testing.T) {
 }
 
 func TestJoin_Full(t *testing.T) {
-	game := gameWith(Limit)
+	game := gameWith(rules.Limit)
 	if err := Join(game, maria); !errors.Is(err, ErrNoPlaces) {
 		t.Fatalf("ожидалась ErrNoPlaces, получено %v", err)
 	}
-	if len(game.Players) != Limit {
+	if len(game.Players) != rules.Limit {
 		t.Fatalf("при отказе список не должен меняться")
 	}
 }
@@ -115,15 +115,15 @@ func TestDecline_NewPlayerListed(t *testing.T) {
 
 func TestAddFriend_Limit(t *testing.T) {
 	game := gameWith(0)
-	for range MaxFriends {
+	for range rules.MaxFriends {
 		mustOK(t, AddFriend(game, ivan))
 	}
 
 	if err := AddFriend(game, ivan); !errors.Is(err, ErrTooManyFriends) {
-		t.Fatalf("друг сверх MaxFriends: ожидалась ErrTooManyFriends, получено %v", err)
+		t.Fatalf("друг сверх rules.MaxFriends: ожидалась ErrTooManyFriends, получено %v", err)
 	}
-	if game.Players[0].Friends != MaxFriends {
-		t.Fatalf("Friends = %d, ожидалось %d", game.Players[0].Friends, MaxFriends)
+	if game.Players[0].Friends != rules.MaxFriends {
+		t.Fatalf("Friends = %d, ожидалось %d", game.Players[0].Friends, rules.MaxFriends)
 	}
 }
 
@@ -137,14 +137,14 @@ func TestAddFriend_WithoutJoin(t *testing.T) {
 }
 
 func TestAddFriend_LastPlace(t *testing.T) {
-	game := gameWith(Limit - 1)
+	game := gameWith(rules.Limit - 1)
 	mustOK(t, AddFriend(game, ivan))
 
 	if err := AddFriend(game, ivan); !errors.Is(err, ErrNoPlaces) {
 		t.Fatalf("сверх лимита: ожидалась ErrNoPlaces, получено %v", err)
 	}
-	if Count(game) != Limit {
-		t.Fatalf("Count = %d, ожидалось %d", Count(game), Limit)
+	if Count(game) != rules.Limit {
+		t.Fatalf("Count = %d, ожидалось %d", Count(game), rules.Limit)
 	}
 }
 
@@ -199,7 +199,7 @@ func TestTransition(t *testing.T) {
 }
 
 func TestTransition_TwelveElevenTwelve(t *testing.T) {
-	game := gameWith(Limit - 1)
+	game := gameWith(rules.Limit - 1)
 
 	before := Count(game)
 	mustOK(t, Join(game, maria))

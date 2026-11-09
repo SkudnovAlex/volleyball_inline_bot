@@ -204,7 +204,7 @@ func TestHandleCallback_NotModifiedIgnored(t *testing.T) {
 
 func TestHandleCallback_AnnounceFilled(t *testing.T) {
 	sender := &mockSender{pinnedMessageID: testBoardID}
-	repository := &mockRepo{data: openGame(game.Limit - 1)}
+	repository := &mockRepo{data: openGame(game.Current().Limit - 1)}
 	newService(sender, repository, tuesday).HandleCallback(press(maria, "join:2026-11-17", testChatID))
 
 	if len(sender.sent) != 1 {
@@ -221,7 +221,7 @@ func TestHandleCallback_AnnounceFilled(t *testing.T) {
 }
 
 func TestHandleCallback_AnnounceOpenedEditsRecent(t *testing.T) {
-	data := openGame(game.Limit)
+	data := openGame(game.Current().Limit)
 	data.Games[0].Players[0] = storage.Player{UserID: maria.ID, Name: "Мария", Status: storage.StatusGoing}
 	sentAt := tuesday().Add(-5 * time.Minute).Unix()
 	data.Games[0].Announce = &storage.Announce{MessageID: 77, Full: true, SentAt: sentAt}
@@ -249,7 +249,7 @@ func TestHandleCallback_AnnounceOpenedEditsRecent(t *testing.T) {
 }
 
 func TestHandleCallback_AnnounceOpenedSendsAfterCooldown(t *testing.T) {
-	data := openGame(game.Limit)
+	data := openGame(game.Current().Limit)
 	data.Games[0].Players[0] = storage.Player{UserID: maria.ID, Name: "Мария", Status: storage.StatusGoing}
 	data.Games[0].Announce = &storage.Announce{MessageID: 77, Full: true, SentAt: tuesday().Add(-time.Hour).Unix()}
 
@@ -266,7 +266,7 @@ func TestHandleCallback_AnnounceOpenedSendsAfterCooldown(t *testing.T) {
 }
 
 func TestHandleCallback_AnnounceEditFailsSendsNew(t *testing.T) {
-	data := openGame(game.Limit)
+	data := openGame(game.Current().Limit)
 	data.Games[0].Players[0] = storage.Player{UserID: maria.ID, Name: "Мария", Status: storage.StatusGoing}
 	data.Games[0].Announce = &storage.Announce{MessageID: 77, Full: true, SentAt: tuesday().Add(-time.Minute).Unix()}
 

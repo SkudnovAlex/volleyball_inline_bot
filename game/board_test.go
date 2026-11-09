@@ -8,7 +8,7 @@ import (
 )
 
 func TestRenderBoard(t *testing.T) {
-	full := gameWith(Limit)
+	full := gameWith(rules.Limit)
 	full.Date, full.MessageID = "2026-11-19", 20
 
 	games := []storage.Game{

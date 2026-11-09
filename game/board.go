@@ -9,8 +9,8 @@ import (
 	"volleyball_inline_bot/storage"
 )
 
-// RenderBoard возвращает текст доски в HTML: ближайшие игры по дате,
-// ниже прошедшие, новые сверху. Дата игры это ссылка на её сообщение.
+// RenderBoard возвращает текст доски в HTML: ближайшие игры по дате, ниже прошедшие, новые сверху. Дата игры это ссылка
+// на её сообщение.
 func RenderBoard(games []storage.Game, chatID int64) string {
 	var upcoming, finished []storage.Game
 	for _, match := range games {
@@ -30,8 +30,8 @@ func RenderBoard(games []storage.Game, chatID int64) string {
 	}
 	for _, match := range upcoming {
 		count := Count(&match)
-		status := fmt.Sprintf("%d/%d", count, Limit)
-		if count >= Limit {
+		status := fmt.Sprintf("%d/%d", count, rules.Limit)
+		if count >= rules.Limit {
 			status += " собран"
 		}
 		fmt.Fprintf(&text, "%s · %s\n", gameLink(match, chatID), status)
@@ -46,8 +46,7 @@ func RenderBoard(games []storage.Game, chatID int64) string {
 	return strings.TrimRight(text.String(), "\n")
 }
 
-// finishedStatus описывает прошедшую игру на доске: после оплаты доля
-// и сколько перевели, до неё сколько было.
+// finishedStatus описывает прошедшую игру на доске: после оплаты доля и сколько перевели, до неё сколько было.
 func finishedStatus(match *storage.Game) string {
 	if !IsPaid(match) {
 		return fmt.Sprintf("было %d, зал не оплачен", Attended(match))
@@ -56,9 +55,8 @@ func finishedStatus(match *storage.Game) string {
 	return fmt.Sprintf("по %d ₽ · перевели %d из %d", match.Payment.PerPerson, PaidCount(match, debtors), len(debtors))
 }
 
-// gameLink возвращает дату игры ссылкой на её сообщение. Ссылки вида
-// t.me/c/... работают только в супергруппах (ID начинается с -100),
-// в обычной группе дата выводится без ссылки.
+// gameLink возвращает дату игры ссылкой на её сообщение. Ссылки вида t.me/c/... работают только в супергруппах (ID
+// начинается с -100), в обычной группе дата выводится без ссылки.
 func gameLink(match storage.Game, chatID int64) string {
 	title := DayTitle(match.Date)
 	internalID, isSupergroup := strings.CutPrefix(strconv.FormatInt(chatID, 10), "-100")

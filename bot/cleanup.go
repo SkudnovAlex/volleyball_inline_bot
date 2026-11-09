@@ -11,8 +11,8 @@ import (
 	"volleyball_inline_bot/storage"
 )
 
-// CleanupGames помечает игры с датой раньше сегодняшней как прошедшие
-// и удаляет из чата и из данных игры старше deleteAfterDays дней.
+// CleanupGames помечает игры с датой раньше сегодняшней как прошедшие и удаляет из чата и из данных игры старше
+// deleteAfterDays дней.
 func (s *Service) CleanupGames() {
 	s.mutex.Lock()
 	defer s.mutex.Unlock()
@@ -59,9 +59,9 @@ func (s *Service) CleanupGames() {
 	s.updateBoardAndSave(&data)
 }
 
-// deleteGame удаляет из чата сообщение игры, объявление и сообщение оплаты. Возвращает true,
-// если игру можно убрать из данных. При нехватке прав запись остаётся
-// до следующей очистки, при прочих ошибках (например, сообщение уже удалили вручную) убирается.
+// deleteGame удаляет из чата сообщение игры, объявление и сообщение оплаты. Возвращает true, если игру можно убрать из
+// данных. При нехватке прав запись остаётся до следующей очистки, при прочих ошибках (например, сообщение уже удалили
+// вручную) убирается.
 func (s *Service) deleteGame(match storage.Game) bool {
 	messageIDs := []int{match.MessageID}
 	if match.Announce != nil {
@@ -86,9 +86,8 @@ func (s *Service) deleteGame(match storage.Game) bool {
 	return true
 }
 
-// isInsufficientRights сообщает, что у бота нет прав на действие в чате.
-// Без права удалять сообщения Telegram отвечает «message can't be deleted»
-// на сообщения старше 48 часов, поэтому эта ошибка тоже считается нехваткой прав.
+// isInsufficientRights сообщает, что у бота нет прав на действие в чате. Без права удалять сообщения Telegram отвечает
+// "message can't be deleted" на сообщения старше 48 часов, поэтому эта ошибка тоже считается нехваткой прав.
 func isInsufficientRights(err error) bool {
 	var telegramError *tgbotapi.Error
 	if !errors.As(err, &telegramError) {

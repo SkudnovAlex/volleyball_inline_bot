@@ -18,7 +18,7 @@ type mockSender struct {
 	nextID    int
 	// requestErr возвращает ошибку для конкретного запроса, nil означает успех.
 	requestErr func(request tgbotapi.Chattable) error
-	// pinnedMessageID отдаётся в ответе getChat как закреплённое сообщение, 0 означает «закрепа нет».
+	// pinnedMessageID отдаётся в ответе getChat как закреплённое сообщение, 0 означает "закрепа нет".
 	pinnedMessageID int
 }
 
@@ -78,23 +78,26 @@ var testGameDays = map[time.Weekday]bool{
 	time.Sunday:   true,
 }
 
-// tuesday: через createDaysAhead дней тоже вторник, 17.11.2026.
+// tuesday: через 7 дней тоже вторник, 17.11.2026.
 func tuesday() time.Time {
 	return time.Date(2026, time.November, 10, 20, 0, 0, 0, time.UTC)
 }
 
-// wednesday: через createDaysAhead дней среда, не игровой день.
+// wednesday: через 7 дней среда, не игровой день.
 func wednesday() time.Time {
 	return time.Date(2026, time.November, 11, 20, 0, 0, 0, time.UTC)
 }
 
 func newService(sender *mockSender, repository *mockRepo, now func() time.Time) *Service {
 	service := New(sender, repository, Settings{
-		ChatID:          -1001,
-		Location:        time.UTC,
-		GameDays:        testGameDays,
-		DeleteAfterDays: testDeleteAfterDays,
-		BotUserName:     "LiberoCoachBot",
+		ChatID:           -1001,
+		Location:         time.UTC,
+		GameDays:         testGameDays,
+		DeleteAfterDays:  testDeleteAfterDays,
+		CreateDaysAhead:  7,
+		AnnounceCooldown: 10 * time.Minute,
+		DraftLock:        time.Hour,
+		BotUserName:      "LiberoCoachBot",
 	})
 	service.now = now
 	return service

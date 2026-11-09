@@ -13,10 +13,6 @@ import (
 	"volleyball_inline_bot/storage"
 )
 
-// draftLock задаёт, сколько оформление оплаты одним человеком не даёт
-// начать его другому.
-const draftLock = time.Hour
-
 // Действия кнопок в личке. callback_data: "<действие>:<дата>[:<строка>]".
 const (
 	actionAbsent     = "absent"
@@ -35,8 +31,7 @@ const (
 	textNeedDetails  = "Напиши одной строкой реквизиты и сумму за зал, например: Т-Банк +7 900 123-45-67 5400"
 )
 
-// startPayment начинает оформление оплаты: создаёт черновик и открывает
-// нажавшему личку с ботом. Вызывается под mutex.
+// startPayment начинает оформление оплаты: создаёт черновик и открывает нажавшему личку с ботом. Вызывается под mutex.
 func (s *Service) startPayment(query *tgbotapi.CallbackQuery, data *storage.Data, match *storage.Game) {
 	if !match.Finished {
 		s.alert(query.ID, "Оплату можно оформить после игры")
@@ -46,7 +41,7 @@ func (s *Service) startPayment(query *tgbotapi.CallbackQuery, data *storage.Data
 	userID := query.From.ID
 	if match.Payment != nil && match.Payment.Draft != nil {
 		draft := match.Payment.Draft
-		if draft.UserID != userID && now.Sub(time.Unix(draft.StartedAt, 0)) < draftLock {
+		if draft.UserID != userID && now.Sub(time.Unix(draft.StartedAt, 0)) < s.draftLock {
 			s.alert(query.ID, fmt.Sprintf("Оплату уже оформляет %s", draft.UserName))
 			return
 		}
@@ -83,8 +78,7 @@ func (s *Service) startPayment(query *tgbotapi.CallbackQuery, data *storage.Data
 	}
 }
 
-// HandlePrivateMessage обрабатывает текст в личке: /start из ссылки
-// и ответы на вопросы оформления оплаты.
+// HandlePrivateMessage обрабатывает текст в личке: /start из ссылки и ответы на вопросы оформления оплаты.
 func (s *Service) HandlePrivateMessage(message *tgbotapi.Message) {
 	s.mutex.Lock()
 	defer s.mutex.Unlock()
@@ -152,8 +146,7 @@ func (s *Service) HandlePrivateMessage(message *tgbotapi.Message) {
 	}
 }
 
-// HandlePrivateCallback обрабатывает кнопки в личке: отметки неявки,
-// «Готово», «Отправить в группу» и «Заново».
+// HandlePrivateCallback обрабатывает кнопки в личке: отметки неявки, "Готово", "Отправить в группу" и "Заново".
 func (s *Service) HandlePrivateCallback(query *tgbotapi.CallbackQuery) {
 	parts := strings.SplitN(query.Data, ":", 3)
 	if len(parts) < 2 {
@@ -303,8 +296,7 @@ func (s *Service) sendPrivate(userID int64, text string, keyboard *tgbotapi.Inli
 	}
 }
 
-// closePrompt заменяет текст сообщения с кнопками и убирает кнопки,
-// чтобы по старому вопросу нельзя было нажать ещё раз.
+// closePrompt заменяет текст сообщения с кнопками и убирает кнопки, чтобы по старому вопросу нельзя было нажать ещё раз.
 func (s *Service) closePrompt(chatID int64, messageID int, text string) {
 	edit := tgbotapi.NewEditMessageText(chatID, messageID, text)
 	edit.ParseMode = tgbotapi.ModeHTML
@@ -313,7 +305,7 @@ func (s *Service) closePrompt(chatID int64, messageID int, text string) {
 	}
 }
 
-// absentKeyboard строит кнопки отметки неявки по две в ряд и «Готово».
+// absentKeyboard строит кнопки отметки неявки по две в ряд и "Готово".
 func absentKeyboard(match *storage.Game) tgbotapi.InlineKeyboardMarkup {
 	draft := match.Payment.Draft
 	var rows [][]tgbotapi.InlineKeyboardButton
@@ -358,7 +350,7 @@ func confirmText(match *storage.Game, requisites string, came, total int, absent
 	return text
 }
 
-// absentSummary заменяет вопрос про неявку после нажатия «Готово».
+// absentSummary заменяет вопрос про неявку после нажатия "Готово".
 func absentSummary(match *storage.Game, absent []string) string {
 	names := absentNames(match, absent)
 	if names == "" {
