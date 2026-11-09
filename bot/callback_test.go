@@ -14,6 +14,9 @@ import (
 
 const testChatID = -1001
 
+// testBoardID это доска, которая уже есть в чате и закреплена.
+const testBoardID = 900
+
 var maria = &tgbotapi.User{ID: 1, FirstName: "Мария", LastName: "Иванова"}
 
 // press собирает нажатие кнопки в сообщении игры.
@@ -32,7 +35,7 @@ func openGame(players int) storage.Data {
 	for index := range players {
 		match.Players = append(match.Players, storage.Player{UserID: int64(100 + index), Name: "Игрок", Status: storage.StatusGoing})
 	}
-	return storage.Data{Games: []storage.Game{match}}
+	return storage.Data{BoardMessageID: testBoardID, Games: []storage.Game{match}}
 }
 
 // callbacks возвращает ответы на нажатия из запросов к Telegram.
@@ -44,6 +47,17 @@ func callbacks(requests []tgbotapi.Chattable) []tgbotapi.CallbackConfig {
 		}
 	}
 	return result
+}
+
+// countPins считает запросы на закрепление.
+func countPins(requests []tgbotapi.Chattable) int {
+	count := 0
+	for _, request := range requests {
+		if _, ok := request.(tgbotapi.PinChatMessageConfig); ok {
+			count++
+		}
+	}
+	return count
 }
 
 // edits возвращает редактирования сообщений из запросов к Telegram.
@@ -58,7 +72,7 @@ func edits(requests []tgbotapi.Chattable) []tgbotapi.EditMessageTextConfig {
 }
 
 func TestHandleCallback_Join(t *testing.T) {
-	sender := &mockSender{}
+	sender := &mockSender{pinnedMessageID: testBoardID}
 	repository := &mockRepo{data: openGame(3)}
 	newService(sender, repository, tuesday).HandleCallback(press(maria, "join:2026-11-17", testChatID))
 
@@ -67,13 +81,19 @@ func TestHandleCallback_Join(t *testing.T) {
 		t.Fatalf("Мария должна быть записана и сохранена: saves=%d players=%+v", repository.saves, players)
 	}
 
-	gameEdits := edits(sender.requested)
-	if len(gameEdits) != 1 {
-		t.Fatalf("ожидалось одно редактирование сообщения игры, получено %d", len(gameEdits))
+	allEdits := edits(sender.requested)
+	if len(allEdits) != 2 {
+		t.Fatalf("ожидалось редактирование игры и доски, получено %d", len(allEdits))
 	}
-	edit := gameEdits[0]
-	if edit.MessageID != 50 || edit.ParseMode != tgbotapi.ModeHTML || !strings.Contains(edit.Text, "4/12") || edit.ReplyMarkup == nil {
-		t.Errorf("неверное редактирование: %+v", edit)
+	gameEdit, boardEdit := allEdits[0], allEdits[1]
+	if gameEdit.MessageID != 50 || gameEdit.ParseMode != tgbotapi.ModeHTML || !strings.Contains(gameEdit.Text, "4/12") || gameEdit.ReplyMarkup == nil {
+		t.Errorf("неверное редактирование игры: %+v", gameEdit)
+	}
+	if boardEdit.MessageID != testBoardID || !strings.Contains(boardEdit.Text, "Вторник 17.11</a> · 4/12") {
+		t.Errorf("неверное редактирование доски: %+v", boardEdit)
+	}
+	if pins := countPins(sender.requested); pins != 0 {
+		t.Errorf("доска уже в закрепе, повторно закреплять не нужно: %d", pins)
 	}
 
 	answers := callbacks(sender.requested)
@@ -86,7 +106,7 @@ func TestHandleCallback_Join(t *testing.T) {
 }
 
 func TestHandleCallback_ActionError(t *testing.T) {
-	sender := &mockSender{}
+	sender := &mockSender{pinnedMessageID: testBoardID}
 	repository := &mockRepo{data: openGame(0)}
 	service := newService(sender, repository, tuesday)
 	service.HandleCallback(press(maria, "join:2026-11-17", testChatID))
@@ -120,7 +140,7 @@ func TestHandleCallback_Closed(t *testing.T) {
 		{"неизвестное действие", openGame(2), "dance:2026-11-17"},
 	}
 	for _, testCase := range cases {
-		sender := &mockSender{}
+		sender := &mockSender{pinnedMessageID: testBoardID}
 		repository := &mockRepo{data: testCase.data}
 		newService(sender, repository, tuesday).HandleCallback(press(maria, testCase.key, testChatID))
 
@@ -132,7 +152,7 @@ func TestHandleCallback_Closed(t *testing.T) {
 }
 
 func TestHandleCallback_IgnoresOtherChats(t *testing.T) {
-	sender := &mockSender{}
+	sender := &mockSender{pinnedMessageID: testBoardID}
 	repository := &mockRepo{data: openGame(0)}
 	newService(sender, repository, tuesday).HandleCallback(press(maria, "join:2026-11-17", -999))
 
@@ -145,7 +165,7 @@ func TestHandleCallback_IgnoresOtherChats(t *testing.T) {
 }
 
 func TestHandleCallback_BadData(t *testing.T) {
-	sender := &mockSender{}
+	sender := &mockSender{pinnedMessageID: testBoardID}
 	repository := &mockRepo{data: openGame(0)}
 	newService(sender, repository, tuesday).HandleCallback(press(maria, "мусор", testChatID))
 
@@ -155,7 +175,7 @@ func TestHandleCallback_BadData(t *testing.T) {
 }
 
 func TestHandleCallback_SaveError(t *testing.T) {
-	sender := &mockSender{}
+	sender := &mockSender{pinnedMessageID: testBoardID}
 	repository := &mockRepo{data: openGame(0), saveErr: errors.New("диск")}
 	newService(sender, repository, tuesday).HandleCallback(press(maria, "join:2026-11-17", testChatID))
 
@@ -168,7 +188,7 @@ func TestHandleCallback_SaveError(t *testing.T) {
 }
 
 func TestHandleCallback_NotModifiedIgnored(t *testing.T) {
-	sender := &mockSender{requestErr: func(request tgbotapi.Chattable) error {
+	sender := &mockSender{pinnedMessageID: testBoardID, requestErr: func(request tgbotapi.Chattable) error {
 		if _, ok := request.(tgbotapi.EditMessageTextConfig); ok {
 			return &tgbotapi.Error{Code: 400, Message: "Bad Request: message is not modified"}
 		}
@@ -183,7 +203,7 @@ func TestHandleCallback_NotModifiedIgnored(t *testing.T) {
 }
 
 func TestHandleCallback_AnnounceFilled(t *testing.T) {
-	sender := &mockSender{}
+	sender := &mockSender{pinnedMessageID: testBoardID}
 	repository := &mockRepo{data: openGame(game.Limit - 1)}
 	newService(sender, repository, tuesday).HandleCallback(press(maria, "join:2026-11-17", testChatID))
 
@@ -206,7 +226,7 @@ func TestHandleCallback_AnnounceOpenedEditsRecent(t *testing.T) {
 	sentAt := tuesday().Add(-5 * time.Minute).Unix()
 	data.Games[0].Announce = &storage.Announce{MessageID: 77, Full: true, SentAt: sentAt}
 
-	sender := &mockSender{}
+	sender := &mockSender{pinnedMessageID: testBoardID}
 	repository := &mockRepo{data: data}
 	newService(sender, repository, tuesday).HandleCallback(press(maria, "decline:2026-11-17", testChatID))
 
@@ -233,7 +253,7 @@ func TestHandleCallback_AnnounceOpenedSendsAfterCooldown(t *testing.T) {
 	data.Games[0].Players[0] = storage.Player{UserID: maria.ID, Name: "Мария", Status: storage.StatusGoing}
 	data.Games[0].Announce = &storage.Announce{MessageID: 77, Full: true, SentAt: tuesday().Add(-time.Hour).Unix()}
 
-	sender := &mockSender{}
+	sender := &mockSender{pinnedMessageID: testBoardID}
 	repository := &mockRepo{data: data}
 	newService(sender, repository, tuesday).HandleCallback(press(maria, "decline:2026-11-17", testChatID))
 
@@ -250,7 +270,7 @@ func TestHandleCallback_AnnounceEditFailsSendsNew(t *testing.T) {
 	data.Games[0].Players[0] = storage.Player{UserID: maria.ID, Name: "Мария", Status: storage.StatusGoing}
 	data.Games[0].Announce = &storage.Announce{MessageID: 77, Full: true, SentAt: tuesday().Add(-time.Minute).Unix()}
 
-	sender := &mockSender{requestErr: func(request tgbotapi.Chattable) error {
+	sender := &mockSender{pinnedMessageID: testBoardID, requestErr: func(request tgbotapi.Chattable) error {
 		if edit, ok := request.(tgbotapi.EditMessageTextConfig); ok && edit.MessageID == 77 {
 			return &tgbotapi.Error{Code: 400, Message: "Bad Request: message to edit not found"}
 		}

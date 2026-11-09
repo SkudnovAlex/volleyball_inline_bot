@@ -1,6 +1,7 @@
 package bot
 
 import (
+	"encoding/json"
 	"errors"
 	"testing"
 	"time"
@@ -17,6 +18,8 @@ type mockSender struct {
 	nextID    int
 	// requestErr возвращает ошибку для конкретного запроса, nil означает успех.
 	requestErr func(request tgbotapi.Chattable) error
+	// pinnedMessageID отдаётся в ответе getChat как закреплённое сообщение, 0 означает «закрепа нет».
+	pinnedMessageID int
 }
 
 func (sender *mockSender) Send(request tgbotapi.Chattable) (tgbotapi.Message, error) {
@@ -34,6 +37,14 @@ func (sender *mockSender) Request(request tgbotapi.Chattable) (*tgbotapi.APIResp
 		if err := sender.requestErr(request); err != nil {
 			return nil, err
 		}
+	}
+	if _, ok := request.(tgbotapi.ChatInfoConfig); ok {
+		chat := tgbotapi.Chat{ID: -1001}
+		if sender.pinnedMessageID != 0 {
+			chat.PinnedMessage = &tgbotapi.Message{MessageID: sender.pinnedMessageID}
+		}
+		result, _ := json.Marshal(chat)
+		return &tgbotapi.APIResponse{Ok: true, Result: result}, nil
 	}
 	return &tgbotapi.APIResponse{Ok: true}, nil
 }
@@ -85,8 +96,9 @@ func TestCreateGame_GameDay(t *testing.T) {
 	repository := &mockRepo{}
 	newService(sender, repository, tuesday).CreateGame()
 
-	if len(sender.sent) != 1 {
-		t.Fatalf("ожидалось одно сообщение, отправлено %d", len(sender.sent))
+	// Первое сообщение это игра, второе это доска: в пустом чате её ещё нет.
+	if len(sender.sent) != 2 {
+		t.Fatalf("ожидались сообщение игры и доска, отправлено %d", len(sender.sent))
 	}
 	message, ok := sender.sent[0].(tgbotapi.MessageConfig)
 	if !ok {
@@ -108,8 +120,14 @@ func TestCreateGame_GameDay(t *testing.T) {
 	if saved := repository.data.Games[0]; saved.Date != "2026-11-17" || saved.MessageID != 101 {
 		t.Errorf("сохранено %+v, ожидалась дата 2026-11-17 и сообщение 101", saved)
 	}
-	if len(sender.requested) != 0 {
-		t.Errorf("сообщение игры не закрепляется: %+v", sender.requested)
+	if repository.data.BoardMessageID != 102 {
+		t.Errorf("BoardMessageID = %d, ожидалось 102", repository.data.BoardMessageID)
+	}
+	// Закрепляется только доска, сообщение игры нет.
+	for _, request := range sender.requested {
+		if pin, ok := request.(tgbotapi.PinChatMessageConfig); ok && pin.MessageID != 102 {
+			t.Errorf("закреплено не то сообщение: %+v", pin)
+		}
 	}
 }
 

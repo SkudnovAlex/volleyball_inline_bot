@@ -57,6 +57,7 @@ func (s *Service) CreateGame() {
 		return
 	}
 	log.Printf("Игра на %s создана, сообщение %d", day, sentMessage.MessageID)
+	s.updateBoardAndSave(&data)
 }
 
 // findGame возвращает игру по дате или nil.

@@ -66,6 +66,7 @@ func (s *Service) HandleCallback(query *tgbotapi.CallbackQuery) {
 		return
 	}
 	s.editGame(match)
+	s.updateBoardAndSave(&data)
 	s.answer(query.ID, "")
 }
 
