@@ -116,7 +116,7 @@ func TestCreateGame_GameDay(t *testing.T) {
 	if message.ChatID != -1001 || message.ParseMode != tgbotapi.ModeHTML {
 		t.Errorf("ChatID = %d, ParseMode = %q", message.ChatID, message.ParseMode)
 	}
-	if want := "<b>Вторник 17.11 в 19:00</b>\nЗапись открыта · 0/12\nсвободно: 12"; message.Text != want {
+	if want := "🏐 <b>Вторник 17.11 · 19:00</b>\n▱▱▱▱▱▱▱▱▱▱▱▱ 0/12 · свободно 12"; message.Text != want {
 		t.Errorf("текст:\n%s\nожидалось:\n%s", message.Text, want)
 	}
 	if keyboard, ok := message.ReplyMarkup.(*tgbotapi.InlineKeyboardMarkup); !ok || keyboard == nil || len(keyboard.InlineKeyboard) != 2 {

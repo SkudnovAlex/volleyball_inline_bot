@@ -46,10 +46,23 @@ func TestDayTitle(t *testing.T) {
 	}
 }
 
+func TestProgressBar(t *testing.T) {
+	cases := map[int]string{
+		0:  "▱▱▱▱▱▱▱▱▱▱▱▱",
+		5:  "▰▰▰▰▰▱▱▱▱▱▱▱",
+		12: "▰▰▰▰▰▰▰▰▰▰▰▰",
+	}
+	for count, want := range cases {
+		if got := progressBar(count); got != want {
+			t.Errorf("progressBar(%d) = %s, ожидалось %s", count, got, want)
+		}
+	}
+}
+
 func TestRenderGame_Open(t *testing.T) {
 	game := &storage.Game{Date: "2026-11-17", Players: []storage.Player{
 		{UserID: 1, Name: "Мария", Status: storage.StatusGoing},
-		{UserID: 2, Name: "Иван", Status: storage.StatusGoing, Friends: 1},
+		{UserID: 2, Name: "Иван", Status: storage.StatusGoing, Friends: 2},
 		{UserID: 3, Name: "Павел", Status: storage.StatusDeclined},
 		{UserID: 4, Name: "Анна", Status: storage.StatusDeclined, Friends: 2},
 		{UserID: 5, Name: "Олег", Status: storage.StatusNone, Friends: 1},
@@ -58,27 +71,29 @@ func TestRenderGame_Open(t *testing.T) {
 	text, keyboard := RenderGame(game)
 
 	want := strings.Join([]string{
-		"<b>Вторник 17.11 в 19:00</b>",
-		"Запись открыта · 6/12",
+		"🏐 <b>Вторник 17.11 · 19:00</b>",
+		"▰▰▰▰▰▰▰▱▱▱▱▱ 7/12 · свободно 5",
+		"",
 		"1. Мария",
 		"2. Иван",
-		"3. друг (Иван)",
-		"4. друг (Анна)",
+		"3.   └ друг",
+		"4.   └ друг",
 		"5. друг (Анна)",
-		"6. друг (Олег)",
-		"свободно: 6",
-		"Не смогут: Павел, Анна",
+		"6. друг (Анна)",
+		"7. друг (Олег)",
+		"",
+		"❌ Не смогут: Павел, Анна",
 	}, "\n")
 	if text != want {
 		t.Fatalf("текст:\n%s\n\nожидалось:\n%s", text, want)
 	}
 
-	wantKb := [][]string{
+	wantKeyboard := [][]string{
 		{"join:2026-11-17", "friend:2026-11-17"},
 		{"decline:2026-11-17", "minus:2026-11-17"},
 	}
-	if keyboard == nil || !equalRows(buttons(keyboard), wantKb) {
-		t.Fatalf("кнопки = %v, ожидалось %v", keyboard, wantKb)
+	if keyboard == nil || !equalRows(buttons(keyboard), wantKeyboard) {
+		t.Fatalf("кнопки = %v, ожидалось %v", keyboard, wantKeyboard)
 	}
 }
 
@@ -88,15 +103,15 @@ func TestRenderGame_Full(t *testing.T) {
 
 	text, keyboard := RenderGame(game)
 
-	if !strings.Contains(text, "Состав собран · 12/12") {
+	if !strings.Contains(text, "▰▰▰▰▰▰▰▰▰▰▰▰ 12/12 · состав собран") {
 		t.Errorf("нет строки о наборе:\n%s", text)
 	}
 	if strings.Contains(text, "свободно") {
-		t.Errorf("при полном составе не нужна строка о свободных местах:\n%s", text)
+		t.Errorf("при полном составе не нужно писать о свободных местах:\n%s", text)
 	}
-	wantKb := [][]string{{"decline:2026-11-17", "minus:2026-11-17"}}
-	if keyboard == nil || !equalRows(buttons(keyboard), wantKb) {
-		t.Fatalf("кнопки = %v, ожидалось %v", buttons(keyboard), wantKb)
+	wantKeyboard := [][]string{{"decline:2026-11-17", "minus:2026-11-17"}}
+	if keyboard == nil || !equalRows(buttons(keyboard), wantKeyboard) {
+		t.Fatalf("кнопки = %v, ожидалось %v", buttons(keyboard), wantKeyboard)
 	}
 }
 
@@ -108,7 +123,7 @@ func TestRenderGame_Finished(t *testing.T) {
 
 	text, keyboard := RenderGame(game)
 
-	want := "<b>Вторник 17.11 · игра прошла</b>\nБыло человек: 1\n1. Мария"
+	want := "🏐 <b>Вторник 17.11 · игра прошла</b>\nБыло человек: 1\n\n1. Мария"
 	if text != want {
 		t.Fatalf("текст:\n%s\n\nожидалось:\n%s", text, want)
 	}
@@ -130,11 +145,12 @@ func TestRenderGame_FinishedPaidMarksAbsent(t *testing.T) {
 	text, _ := RenderGame(game)
 
 	want := strings.Join([]string{
-		"<b>Вторник 17.11 · игра прошла</b>",
+		"🏐 <b>Вторник 17.11 · игра прошла</b>",
 		"Было человек: 9",
+		"",
 		"1. Мария",
 		"2. Сергей · не пришёл",
-		"3. друг (Сергей)",
+		"3.   └ друг",
 	}, "\n")
 	if text != want {
 		t.Fatalf("текст:\n%s\n\nожидалось:\n%s", text, want)
@@ -157,7 +173,7 @@ func TestRenderGame_DraftDoesNotMarkAbsent(t *testing.T) {
 func TestRenderGame_Empty(t *testing.T) {
 	text, _ := RenderGame(&storage.Game{Date: "2026-11-17"})
 
-	want := "<b>Вторник 17.11 в 19:00</b>\nЗапись открыта · 0/12\nсвободно: 12"
+	want := "🏐 <b>Вторник 17.11 · 19:00</b>\n▱▱▱▱▱▱▱▱▱▱▱▱ 0/12 · свободно 12"
 	if text != want {
 		t.Fatalf("текст:\n%s\n\nожидалось:\n%s", text, want)
 	}
@@ -165,7 +181,7 @@ func TestRenderGame_Empty(t *testing.T) {
 
 func TestRenderGame_EscapesNames(t *testing.T) {
 	game := &storage.Game{Date: "2026-11-17", Players: []storage.Player{
-		{UserID: 1, Name: "<b>Хакер</b> & Ко", Status: storage.StatusGoing, Friends: 1},
+		{UserID: 1, Name: "<b>Хакер</b> & Ко", Status: storage.StatusDeclined, Friends: 1},
 	}}
 
 	text, _ := RenderGame(game)
@@ -173,7 +189,8 @@ func TestRenderGame_EscapesNames(t *testing.T) {
 	if strings.Contains(text, "<b>Хакер</b>") {
 		t.Fatalf("имя не экранировано:\n%s", text)
 	}
-	if !strings.Contains(text, "1. &lt;b&gt;Хакер&lt;/b&gt; &amp; Ко") || !strings.Contains(text, "друг (&lt;b&gt;Хакер") {
+	if !strings.Contains(text, "1. друг (&lt;b&gt;Хакер&lt;/b&gt; &amp; Ко)") ||
+		!strings.Contains(text, "Не смогут: &lt;b&gt;Хакер&lt;/b&gt; &amp; Ко") {
 		t.Fatalf("ожидалось экранированное имя:\n%s", text)
 	}
 }

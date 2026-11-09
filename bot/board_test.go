@@ -135,3 +135,53 @@ func TestRefreshBoard_SendsMissingPaymentMessage(t *testing.T) {
 		t.Fatalf("сообщение оплаты ответом на новое сообщение игры: %+v", payment)
 	}
 }
+
+func TestRedrawGames(t *testing.T) {
+	data := finishedGame()
+	data.Games[0].Payment = &storage.Payment{RenterID: ivan.ID, RenterName: "Иван", Came: 4, PerPerson: 1000, MessageID: 400}
+	data.Games = append(data.Games, storage.Game{Date: "2026-11-19", MessageID: 0})
+	sender := &mockSender{pinnedMessageID: testBoardID}
+	repository := &mockRepo{data: data}
+	newService(sender, repository, tuesday).RedrawGames()
+
+	var edited []int
+	for _, edit := range edits(sender.requested) {
+		edited = append(edited, edit.MessageID)
+	}
+	if len(edited) != 2 || edited[0] != 50 || edited[1] != 400 || len(sender.sent) != 0 || repository.saves != 0 {
+		t.Fatalf("перерисовываются сообщения игры и оплаты, без отправки и записи: edited=%v sent=%d saves=%d",
+			edited, len(sender.sent), repository.saves)
+	}
+}
+
+func TestRedrawGames_ResendsDeletedMessages(t *testing.T) {
+	data := finishedGame()
+	data.Games[0].Payment = &storage.Payment{RenterID: ivan.ID, RenterName: "Иван", Came: 4, PerPerson: 1000, MessageID: 400}
+	data.Games = append(data.Games, storage.Game{Date: "2026-11-19", MessageID: 60})
+	notFound := &tgbotapi.Error{Code: 400, Message: "Bad Request: message to edit not found"}
+	sender := &mockSender{pinnedMessageID: testBoardID, requestErr: func(request tgbotapi.Chattable) error {
+		if edit, ok := request.(tgbotapi.EditMessageTextConfig); ok && edit.MessageID == 50 {
+			return notFound
+		}
+		return nil
+	}}
+	repository := &mockRepo{data: data}
+	service := newService(sender, repository, tuesday)
+
+	service.RedrawGames()
+
+	games := repository.data.Games
+	if games[0].MessageID != 0 || games[0].Payment.MessageID != 0 || games[1].MessageID != 60 {
+		t.Fatalf("удалённая игра забыта вместе с сообщением оплаты, живая осталась: %+v", games)
+	}
+	if deleted := deletedIDs(sender.requested); len(deleted) != 1 || deleted[0] != 400 {
+		t.Fatalf("старое сообщение оплаты удаляется: %v", deleted)
+	}
+
+	sender.requestErr = nil
+	service.RefreshBoard()
+
+	if games := repository.data.Games; games[0].MessageID == 0 || games[0].Payment.MessageID == 0 {
+		t.Fatalf("после RefreshBoard игра и оплата отправлены заново: %+v", games[0])
+	}
+}

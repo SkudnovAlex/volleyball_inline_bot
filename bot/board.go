@@ -33,6 +33,51 @@ func (s *Service) RefreshBoard() {
 	s.updateBoardAndSave(&data)
 }
 
+// RedrawGames перерисовывает сообщения всех игр и оплат по текущим данным.
+// Вызывается при старте, чтобы после обновления бота сообщения в чате
+// получили новое оформление. Если сообщение удалили из чата, бот забывает
+// его номер, и RefreshBoard отправляет его заново.
+func (s *Service) RedrawGames() {
+	s.mutex.Lock()
+	defer s.mutex.Unlock()
+
+	data, err := s.repository.Load()
+	if err != nil {
+		log.Printf("Ошибка чтения хранилища: %v", err)
+		return
+	}
+	changed := false
+	for index := range data.Games {
+		match := &data.Games[index]
+		if match.MessageID == 0 {
+			continue
+		}
+		if !s.editGame(match) {
+			log.Printf("Сообщение игры %s удалено из чата, отправлю заново", match.Date)
+			match.MessageID = 0
+			// Сообщение оплаты отвечает на сообщение игры, поэтому
+			// переотправляется вместе с ней. Старое, если осталось, удаляем.
+			if match.Payment != nil && match.Payment.MessageID != 0 {
+				s.sender.Request(tgbotapi.NewDeleteMessage(s.chatID, match.Payment.MessageID))
+				match.Payment.MessageID = 0
+			}
+			changed = true
+			continue
+		}
+		if !s.editPaymentMessage(match) {
+			log.Printf("Сообщение оплаты %s удалено из чата, отправлю заново", match.Date)
+			match.Payment.MessageID = 0
+			changed = true
+		}
+	}
+	if !changed {
+		return
+	}
+	if err := s.repository.Save(data); err != nil {
+		log.Printf("Не удалось сохранить данные после перерисовки: %v", err)
+	}
+}
+
 // sendMissingGames отправляет сообщения для игр с message_id 0 и сообщения
 // оплаты для оплаченных игр без него: так игру можно добавить или
 // восстановить, вписав её в файл данных вручную. Возвращает true,

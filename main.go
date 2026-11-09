@@ -38,9 +38,11 @@ func main() {
 		BotUserName:     botAPI.Self.UserName,
 	})
 	// При старте сразу выполняем задачи расписания: бот мог быть выключен
-	// в момент их запуска. Затем доска, если её ещё нет.
+	// в момент их запуска. Затем перерисовываем сообщения игр (оформление
+	// могло измениться с обновлением бота) и доску.
 	service.CleanupGames()
 	service.CreateGame()
+	service.RedrawGames()
 	service.RefreshBoard()
 
 	planner := scheduler.New(settings.Location)

@@ -54,15 +54,22 @@ func (s *Service) markPaid(query *tgbotapi.CallbackQuery, data *storage.Data, ma
 }
 
 // editPaymentMessage перерисовывает сообщение оплаты по текущим данным.
-func (s *Service) editPaymentMessage(match *storage.Game) {
+// Возвращает false, если сообщения оплаты больше нет в чате.
+func (s *Service) editPaymentMessage(match *storage.Game) bool {
 	if match.Payment == nil || match.Payment.MessageID == 0 {
-		return
+		return true
 	}
 	text, keyboard := game.RenderPayment(match)
 	edit := tgbotapi.NewEditMessageText(s.chatID, match.Payment.MessageID, text)
 	edit.ParseMode = tgbotapi.ModeHTML
 	edit.ReplyMarkup = keyboard
-	if _, err := s.sender.Request(edit); err != nil && !isNotModified(err) {
-		log.Printf("Не удалось обновить сообщение оплаты %s: %v", match.Date, err)
+	_, err := s.sender.Request(edit)
+	if err == nil || isNotModified(err) {
+		return true
 	}
+	if isMessageNotFound(err) {
+		return false
+	}
+	log.Printf("Не удалось обновить сообщение оплаты %s: %v", match.Date, err)
+	return true
 }

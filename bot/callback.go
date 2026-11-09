@@ -105,14 +105,21 @@ func applyAction(match *storage.Game, action string, user game.User) error {
 }
 
 // editGame перерисовывает сообщение игры по текущим данным.
-func (s *Service) editGame(match *storage.Game) {
+// Возвращает false, если сообщения игры больше нет в чате.
+func (s *Service) editGame(match *storage.Game) bool {
 	text, keyboard := game.RenderGame(match)
 	edit := tgbotapi.NewEditMessageText(s.chatID, match.MessageID, text)
 	edit.ParseMode = tgbotapi.ModeHTML
 	edit.ReplyMarkup = keyboard
-	if _, err := s.sender.Request(edit); err != nil && !isNotModified(err) {
-		log.Printf("Не удалось обновить сообщение игры %s: %v", match.Date, err)
+	_, err := s.sender.Request(edit)
+	if err == nil || isNotModified(err) {
+		return true
 	}
+	if isMessageNotFound(err) {
+		return false
+	}
+	log.Printf("Не удалось обновить сообщение игры %s: %v", match.Date, err)
+	return true
 }
 
 // answer закрывает «часики» на кнопке, text показывается коротким уведомлением.
