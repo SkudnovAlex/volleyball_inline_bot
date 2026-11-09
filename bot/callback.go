@@ -58,6 +58,10 @@ func (s *Service) HandleCallback(query *tgbotapi.CallbackQuery) {
 		s.startPayment(query, &data, match)
 		return
 	}
+	if match != nil && action == game.ActionPaid {
+		s.markPaid(query, &data, match)
+		return
+	}
 	if match == nil || match.Finished {
 		s.alert(query.ID, textClosed)
 		return

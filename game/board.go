@@ -40,10 +40,20 @@ func RenderBoard(games []storage.Game, chatID int64) string {
 	if len(finished) > 0 {
 		text.WriteString("\n<b>Прошедшие</b>\n")
 		for _, match := range finished {
-			fmt.Fprintf(&text, "%s · было %d\n", gameLink(match, chatID), Attended(&match))
+			fmt.Fprintf(&text, "%s · %s\n", gameLink(match, chatID), finishedStatus(&match))
 		}
 	}
 	return strings.TrimRight(text.String(), "\n")
+}
+
+// finishedStatus описывает прошедшую игру на доске: после оплаты доля
+// и сколько перевели, до неё сколько было.
+func finishedStatus(match *storage.Game) string {
+	if !IsPaid(match) {
+		return fmt.Sprintf("было %d, зал не оплачен", Attended(match))
+	}
+	debtors := Debtors(match)
+	return fmt.Sprintf("по %d ₽ · перевели %d из %d", match.Payment.PerPerson, PaidCount(match, debtors), len(debtors))
 }
 
 // gameLink возвращает дату игры ссылкой на её сообщение. Ссылки вида

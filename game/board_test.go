@@ -16,7 +16,14 @@ func TestRenderBoard(t *testing.T) {
 		*full,
 		{Date: "2026-11-17", MessageID: 10, Players: []storage.Player{{UserID: 1, Status: storage.StatusGoing, Friends: 1}}},
 		{Date: "2026-11-12", MessageID: 5, Finished: true, Players: []storage.Player{{UserID: 1, Status: storage.StatusGoing}}},
-		{Date: "2026-11-15", MessageID: 7, Finished: true},
+		{Date: "2026-11-15", MessageID: 7, Finished: true,
+			Players: []storage.Player{
+				{UserID: 1, Status: storage.StatusGoing},
+				{UserID: 2, Status: storage.StatusGoing},
+				{UserID: 3, Status: storage.StatusGoing},
+			},
+			Payment: &storage.Payment{RenterID: 3, Came: 3, PerPerson: 500, PaidUserIDs: []int64{2}},
+		},
 	}
 
 	got := RenderBoard(games, -1001234567890)
@@ -28,8 +35,8 @@ func TestRenderBoard(t *testing.T) {
 		`<a href="https://t.me/c/1234567890/30">Воскресенье 22.11</a> · 0/12`,
 		"",
 		"<b>Прошедшие</b>",
-		`<a href="https://t.me/c/1234567890/7">Воскресенье 15.11</a> · было 0`,
-		`<a href="https://t.me/c/1234567890/5">Четверг 12.11</a> · было 1`,
+		`<a href="https://t.me/c/1234567890/7">Воскресенье 15.11</a> · по 500 ₽ · перевели 1 из 2`,
+		`<a href="https://t.me/c/1234567890/5">Четверг 12.11</a> · было 1, зал не оплачен`,
 	}, "\n")
 	if got != want {
 		t.Fatalf("доска:\n%s\n\nожидалось:\n%s", got, want)

@@ -118,3 +118,20 @@ func TestRefreshBoard_SendsMissingGames(t *testing.T) {
 		t.Errorf("данные сохраняются один раз, saves=%d", repository.saves)
 	}
 }
+
+func TestRefreshBoard_SendsMissingPaymentMessage(t *testing.T) {
+	data := finishedGame()
+	data.Games[0].MessageID = 0
+	data.Games[0].Payment = &storage.Payment{RenterID: ivan.ID, RenterName: "Иван", Came: 4, PerPerson: 1000}
+	sender := &mockSender{pinnedMessageID: testBoardID}
+	repository := &mockRepo{data: data}
+	newService(sender, repository, tuesday).RefreshBoard()
+
+	if len(sender.sent) != 2 {
+		t.Fatalf("ожидались сообщение игры и сообщение оплаты, отправлено %d", len(sender.sent))
+	}
+	payment := sender.sent[1].(tgbotapi.MessageConfig)
+	if payment.ReplyToMessageID != 101 || repository.data.Games[0].Payment.MessageID != 102 {
+		t.Fatalf("сообщение оплаты ответом на новое сообщение игры: %+v", payment)
+	}
+}

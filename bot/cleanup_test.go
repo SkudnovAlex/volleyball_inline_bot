@@ -134,3 +134,15 @@ func TestCleanupGames_OverdueUnfinishedDeleted(t *testing.T) {
 			repository.data.Games, len(edits(sender.requested)))
 	}
 }
+
+func TestCleanupGames_DeletesPaymentMessage(t *testing.T) {
+	sender := &mockSender{pinnedMessageID: testBoardID}
+	repository := &mockRepo{data: storage.Data{BoardMessageID: testBoardID, Games: []storage.Game{
+		{Date: "2026-10-01", MessageID: 1, Finished: true, Payment: &storage.Payment{RenterID: 5, MessageID: 3}},
+	}}}
+	newService(sender, repository, tuesday).CleanupGames()
+
+	if got := deletedIDs(sender.requested); len(got) != 2 || got[1] != 3 {
+		t.Fatalf("вместе с игрой удаляется сообщение оплаты: %v", got)
+	}
+}

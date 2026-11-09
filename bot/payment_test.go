@@ -312,3 +312,101 @@ func TestHandleUpdate_RoutesPrivate(t *testing.T) {
 		t.Fatalf("сообщение в личке уходит в сценарий оплаты: %q", text)
 	}
 }
+
+// confirmedDraft возвращает прошедшую игру, где Иван дошёл до проверки:
+// было 4, 4000 ₽, реквизиты «Сбер 8900».
+func confirmedDraft() storage.Data {
+	data := finishedGame()
+	data.Games[0].Payment = &storage.Payment{Draft: &storage.Draft{
+		UserID: ivan.ID, UserName: "Иван", Step: storage.StepConfirm,
+		Came: 4, Requisites: "Сбер 8900", Total: 4000, StartedAt: tuesday().Unix(),
+	}}
+	return data
+}
+
+func TestPost_SendsPaymentMessage(t *testing.T) {
+	sender := &mockSender{pinnedMessageID: testBoardID}
+	repository := &mockRepo{data: confirmedDraft()}
+	newService(sender, repository, tuesday).HandlePrivateCallback(pressPrivate(ivan, "post:2026-11-09"))
+
+	var paymentMessage *tgbotapi.MessageConfig
+	for _, request := range sender.sent {
+		if message, ok := request.(tgbotapi.MessageConfig); ok && message.ChatID == testChatID {
+			paymentMessage = &message
+		}
+	}
+	if paymentMessage == nil || paymentMessage.ReplyToMessageID != 50 || paymentMessage.ReplyMarkup == nil ||
+		!strings.Contains(paymentMessage.Text, `<a href="tg://user?id=1">Мария</a> 1000 ₽`) {
+		t.Fatalf("сообщение оплаты ответом на игру с упоминаниями: %+v", paymentMessage)
+	}
+	if id := repository.data.Games[0].Payment.MessageID; id == 0 {
+		t.Fatalf("номер сообщения оплаты сохраняется")
+	}
+	if text := lastPrivate(t, sender).Text; text != "Готово, сообщение в группе." {
+		t.Errorf("ответ в личке: %q", text)
+	}
+}
+
+func TestPost_ReplacesPreviousPaymentMessage(t *testing.T) {
+	data := confirmedDraft()
+	data.Games[0].Payment.MessageID = 400
+	data.Games[0].Payment.PaidUserIDs = []int64{1}
+	sender := &mockSender{pinnedMessageID: testBoardID}
+	repository := &mockRepo{data: data}
+	newService(sender, repository, tuesday).HandlePrivateCallback(pressPrivate(ivan, "post:2026-11-09"))
+
+	if deleted := deletedIDs(sender.requested); len(deleted) != 1 || deleted[0] != 400 {
+		t.Fatalf("прошлое сообщение оплаты удаляется: %v", deleted)
+	}
+	payment := repository.data.Games[0].Payment
+	if payment.MessageID == 400 || payment.MessageID == 0 || len(payment.PaidUserIDs) != 0 {
+		t.Fatalf("новое сообщение, отметки сброшены: %+v", payment)
+	}
+}
+
+func TestPaid_MarksAndEdits(t *testing.T) {
+	data := finishedGame()
+	data.Games[0].Payment = &storage.Payment{
+		RenterID: ivan.ID, RenterName: "Иван", Requisites: "Сбер 8900",
+		Came: 4, Total: 4000, PerPerson: 1000, MessageID: 400,
+	}
+	sender := &mockSender{pinnedMessageID: testBoardID}
+	repository := &mockRepo{data: data}
+	service := newService(sender, repository, tuesday)
+	sergey := &tgbotapi.User{ID: 2, FirstName: "Сергей"}
+
+	service.HandleCallback(press(sergey, "paid:2026-11-09", testChatID))
+
+	if paid := repository.data.Games[0].Payment.PaidUserIDs; len(paid) != 1 || paid[0] != 2 {
+		t.Fatalf("Сергей отмечен: %v", paid)
+	}
+	answers := callbacks(sender.requested)
+	if len(answers) != 1 || answers[0].ShowAlert || answers[0].Text != "Отмечено: ты перевёл 2000 ₽" {
+		t.Fatalf("короткое уведомление с суммой за двоих: %+v", answers)
+	}
+	var paymentEdit *tgbotapi.EditMessageTextConfig
+	for _, edit := range edits(sender.requested) {
+		if edit.MessageID == 400 {
+			paymentEdit = &edit
+		}
+	}
+	if paymentEdit == nil || !strings.Contains(paymentEdit.Text, "перевели 1 из 2") {
+		t.Fatalf("сообщение оплаты перерисовано: %+v", paymentEdit)
+	}
+
+	sender.requested = nil
+	service.HandleCallback(press(sergey, "paid:2026-11-09", testChatID))
+	if answers := callbacks(sender.requested); len(answers) != 1 || !answers[0].ShowAlert ||
+		answers[0].Text != "Ты уже отметил перевод 2000 ₽" {
+		t.Fatalf("повторное нажатие отметку не снимает: %+v", answers)
+	}
+	if paid := repository.data.Games[0].Payment.PaidUserIDs; len(paid) != 1 {
+		t.Fatalf("отметка Сергея остаётся: %v", paid)
+	}
+
+	sender.requested = nil
+	service.HandleCallback(press(ivan, "paid:2026-11-09", testChatID))
+	if answers := callbacks(sender.requested); len(answers) != 1 || !answers[0].ShowAlert {
+		t.Fatalf("плательщику окно «Ты платил за зал»: %+v", answers)
+	}
+}

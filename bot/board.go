@@ -33,9 +33,10 @@ func (s *Service) RefreshBoard() {
 	s.updateBoardAndSave(&data)
 }
 
-// sendMissingGames отправляет сообщения для игр с message_id 0: так игру
-// можно добавить или восстановить, вписав её в файл данных вручную.
-// Возвращает true, если что-то отправлено.
+// sendMissingGames отправляет сообщения для игр с message_id 0 и сообщения
+// оплаты для оплаченных игр без него: так игру можно добавить или
+// восстановить, вписав её в файл данных вручную. Возвращает true,
+// если что-то отправлено.
 func (s *Service) sendMissingGames(data *storage.Data) bool {
 	sent := false
 	for index := range data.Games {
@@ -55,6 +56,26 @@ func (s *Service) sendMissingGames(data *storage.Data) bool {
 		match.MessageID = sentMessage.MessageID
 		sent = true
 		log.Printf("Отправлено сообщение игры %s: %d", match.Date, sentMessage.MessageID)
+	}
+
+	// Оплаченной игре без сообщения оплаты отправляем и его, ответом на игру.
+	for index := range data.Games {
+		match := &data.Games[index]
+		if !game.IsPaid(match) || match.Payment.MessageID != 0 || match.MessageID == 0 {
+			continue
+		}
+		text, keyboard := game.RenderPayment(match)
+		message := tgbotapi.NewMessage(s.chatID, text)
+		message.ParseMode = tgbotapi.ModeHTML
+		message.ReplyToMessageID = match.MessageID
+		message.ReplyMarkup = keyboard
+		sentMessage, err := s.sender.Send(message)
+		if err != nil {
+			log.Printf("Не удалось отправить сообщение оплаты %s: %v", match.Date, err)
+			continue
+		}
+		match.Payment.MessageID = sentMessage.MessageID
+		sent = true
 	}
 	return sent
 }

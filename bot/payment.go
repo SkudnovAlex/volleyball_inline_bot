@@ -215,8 +215,9 @@ func (s *Service) HandlePrivateCallback(query *tgbotapi.CallbackQuery) {
 		}
 		s.closePrompt(chatID, messageID, confirmText(match, match.Payment.Requisites, match.Payment.Came,
 			match.Payment.Total, match.Payment.Absent))
-		s.sendPrivate(userID, "Готово, оплата записана.", nil)
 		s.editGame(match)
+		s.sendPaymentMessage(&data, match)
+		s.sendPrivate(userID, "Готово, сообщение в группе.", nil)
 		s.updateBoardAndSave(&data)
 	}
 	s.answer(query.ID, "")
