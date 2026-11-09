@@ -41,16 +41,13 @@ func main() {
 	updatesConfig.Timeout = updatesTimeout
 	// Нажатия кнопок и сообщения в личке с ботом (оформление оплаты).
 	updatesConfig.AllowedUpdates = []string{"message", "callback_query"}
-	go handleUpdates(botAPI.GetUpdatesChan(updatesConfig))
+	updates := botAPI.GetUpdatesChan(updatesConfig)
+	go func() {
+		for update := range updates {
+			service.HandleUpdate(update)
+		}
+	}()
 
 	scheduler.WaitForShutdown(planner)
 	botAPI.StopReceivingUpdates()
-}
-
-// handleUpdates читает апдейты до закрытия канала.
-// Обработчики нажатий и сообщений появятся в следующих задачах.
-func handleUpdates(updates tgbotapi.UpdatesChannel) {
-	for update := range updates {
-		log.Printf("Апдейт %d пропущен: обработчиков пока нет", update.UpdateID)
-	}
 }

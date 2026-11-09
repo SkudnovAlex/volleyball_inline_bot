@@ -15,6 +15,8 @@ type mockSender struct {
 	requested []tgbotapi.Chattable
 	sendErr   error
 	nextID    int
+	// requestErr возвращает ошибку для конкретного запроса, nil означает успех.
+	requestErr func(request tgbotapi.Chattable) error
 }
 
 func (sender *mockSender) Send(request tgbotapi.Chattable) (tgbotapi.Message, error) {
@@ -28,6 +30,11 @@ func (sender *mockSender) Send(request tgbotapi.Chattable) (tgbotapi.Message, er
 
 func (sender *mockSender) Request(request tgbotapi.Chattable) (*tgbotapi.APIResponse, error) {
 	sender.requested = append(sender.requested, request)
+	if sender.requestErr != nil {
+		if err := sender.requestErr(request); err != nil {
+			return nil, err
+		}
+	}
 	return &tgbotapi.APIResponse{Ok: true}, nil
 }
 
