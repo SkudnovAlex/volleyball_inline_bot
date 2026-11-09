@@ -112,8 +112,45 @@ func TestRenderGame_Finished(t *testing.T) {
 	if text != want {
 		t.Fatalf("текст:\n%s\n\nожидалось:\n%s", text, want)
 	}
-	if keyboard != nil {
-		t.Fatalf("у прошедшей игры не должно быть кнопок: %v", buttons(keyboard))
+	wantKeyboard := [][]string{{"hall:2026-11-17"}}
+	if keyboard == nil || !equalRows(buttons(keyboard), wantKeyboard) {
+		t.Fatalf("у прошедшей игры одна кнопка оплаты: %v", keyboard)
+	}
+}
+
+func TestRenderGame_FinishedPaidMarksAbsent(t *testing.T) {
+	game := &storage.Game{Date: "2026-11-17", Finished: true,
+		Players: []storage.Player{
+			{UserID: 1, Name: "Мария", Status: storage.StatusGoing},
+			{UserID: 2, Name: "Сергей", Status: storage.StatusGoing, Friends: 1},
+		},
+		Payment: &storage.Payment{RenterID: 1, Came: 9, Absent: []string{"2"}},
+	}
+
+	text, _ := RenderGame(game)
+
+	want := strings.Join([]string{
+		"<b>Вторник 17.11 · игра прошла</b>",
+		"Было человек: 9",
+		"1. Мария",
+		"2. Сергей · не пришёл",
+		"3. друг (Сергей)",
+	}, "\n")
+	if text != want {
+		t.Fatalf("текст:\n%s\n\nожидалось:\n%s", text, want)
+	}
+}
+
+func TestRenderGame_DraftDoesNotMarkAbsent(t *testing.T) {
+	game := &storage.Game{Date: "2026-11-17", Finished: true,
+		Players: []storage.Player{{UserID: 2, Name: "Сергей", Status: storage.StatusGoing}},
+		Payment: &storage.Payment{Draft: &storage.Draft{UserID: 1, Absent: []string{"2"}}},
+	}
+
+	text, _ := RenderGame(game)
+
+	if strings.Contains(text, "не пришёл") || !strings.Contains(text, "Было человек: 1") {
+		t.Fatalf("пока оплата не отправлена, черновик в группе не виден:\n%s", text)
 	}
 }
 

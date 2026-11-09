@@ -36,7 +36,7 @@ var weekdays = map[time.Weekday]string{
 }
 
 // RenderGame возвращает текст сообщения игры в HTML и клавиатуру.
-// Для прошедшей игры клавиатура nil: при редактировании кнопки исчезнут.
+// У прошедшей игры одна кнопка «Я оплатил зал».
 func RenderGame(game *storage.Game) (string, *tgbotapi.InlineKeyboardMarkup) {
 	var text strings.Builder
 	count := Count(game)
@@ -44,7 +44,7 @@ func RenderGame(game *storage.Game) (string, *tgbotapi.InlineKeyboardMarkup) {
 	switch {
 	case game.Finished:
 		fmt.Fprintf(&text, "<b>%s · игра прошла</b>\n", DayTitle(game.Date))
-		fmt.Fprintf(&text, "Было человек: %d\n", count)
+		fmt.Fprintf(&text, "Было человек: %d\n", Attended(game))
 	case count >= Limit:
 		fmt.Fprintf(&text, "<b>%s в %d:00</b>\n", DayTitle(game.Date), GameHour)
 		fmt.Fprintf(&text, "Состав собран · %d/%d\n", count, Limit)
@@ -53,8 +53,16 @@ func RenderGame(game *storage.Game) (string, *tgbotapi.InlineKeyboardMarkup) {
 		fmt.Fprintf(&text, "Запись открыта · %d/%d\n", count, Limit)
 	}
 
-	for index, line := range lineup(game) {
-		fmt.Fprintf(&text, "%d. %s\n", index+1, line)
+	var absent []string
+	if IsPaid(game) {
+		absent = game.Payment.Absent
+	}
+	for index, line := range Lines(game) {
+		mark := ""
+		if IsAbsent(absent, line.ID) {
+			mark = " · не пришёл"
+		}
+		fmt.Fprintf(&text, "%d. %s%s\n", index+1, line.Label, mark)
 	}
 	if !game.Finished && count < Limit {
 		fmt.Fprintf(&text, "свободно: %d\n", Limit-count)
@@ -82,27 +90,15 @@ func DayTitle(date string) string {
 	return fmt.Sprintf("%s %s", weekdays[day.Weekday()], day.Format("02.01"))
 }
 
-// lineup возвращает строки состава: человек, затем его друзья.
-func lineup(game *storage.Game) []string {
-	var lines []string
-	for _, player := range game.Players {
-		name := html.EscapeString(player.Name)
-		if player.Status == storage.StatusGoing {
-			lines = append(lines, name)
-		}
-		for range player.Friends {
-			lines = append(lines, fmt.Sprintf("друг (%s)", name))
-		}
-	}
-	return lines
-}
-
 func buildKeyboard(game *storage.Game, count int) *tgbotapi.InlineKeyboardMarkup {
-	if game.Finished {
-		return nil
-	}
 	button := func(text, action string) tgbotapi.InlineKeyboardButton {
 		return tgbotapi.NewInlineKeyboardButtonData(text, action+":"+game.Date)
+	}
+	if game.Finished {
+		keyboard := tgbotapi.NewInlineKeyboardMarkup(
+			tgbotapi.NewInlineKeyboardRow(button("💳 Я оплатил зал", ActionHall)),
+		)
+		return &keyboard
 	}
 	leave := tgbotapi.NewInlineKeyboardRow(
 		button("❌ Не смогу", ActionDecline),

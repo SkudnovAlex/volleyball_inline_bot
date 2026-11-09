@@ -30,7 +30,13 @@ func main() {
 	log.Printf("Бот @%s запущен", botAPI.Self.UserName)
 
 	store := storage.NewStore(settings.StorePath)
-	service := bot.New(botAPI, store, settings.ChatID, settings.Location, settings.GameDays, settings.DeleteAfterDays)
+	service := bot.New(botAPI, store, bot.Settings{
+		ChatID:          settings.ChatID,
+		Location:        settings.Location,
+		GameDays:        settings.GameDays,
+		DeleteAfterDays: settings.DeleteAfterDays,
+		BotUserName:     botAPI.Self.UserName,
+	})
 	// При старте сразу выполняем задачи расписания: бот мог быть выключен
 	// в момент их запуска. Затем доска, если её ещё нет.
 	service.CleanupGames()

@@ -60,8 +60,9 @@ func TestCleanupGames(t *testing.T) {
 			t.Errorf("лишнее редактирование сообщения %d", edit.MessageID)
 		}
 	}
-	if gameEdit == nil || gameEdit.ReplyMarkup != nil {
-		t.Errorf("сообщение прошедшей игры перерисовывается без кнопок: %+v", gameEdit)
+	if gameEdit == nil || gameEdit.ReplyMarkup == nil || len(gameEdit.ReplyMarkup.InlineKeyboard) != 1 ||
+		*gameEdit.ReplyMarkup.InlineKeyboard[0][0].CallbackData != "hall:2026-11-09" {
+		t.Errorf("у прошедшей игры вместо кнопок записи кнопка оплаты: %+v", gameEdit)
 	}
 	if boardEdit == nil {
 		t.Errorf("после очистки обновляется доска")

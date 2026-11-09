@@ -5,6 +5,8 @@ import (
 	"testing"
 
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
+
+	"volleyball_inline_bot/storage"
 )
 
 func TestRefreshBoard_SendsAndPinsWhenMissing(t *testing.T) {
@@ -89,5 +91,30 @@ func TestRefreshBoard_OtherEditErrorKeepsBoard(t *testing.T) {
 
 	if len(sender.sent) != 0 || repository.data.BoardMessageID != testBoardID {
 		t.Fatalf("при сетевой ошибке новая доска не отправляется: sent=%d id=%d", len(sender.sent), repository.data.BoardMessageID)
+	}
+}
+
+func TestRefreshBoard_SendsMissingGames(t *testing.T) {
+	data := openGame(2)
+	data.Games[0].MessageID = 0
+	data.Games = append(data.Games, storage.Game{Date: "2026-11-09", MessageID: 0, Finished: true})
+	data.Games = append(data.Games, storage.Game{Date: "2026-11-19", MessageID: 60})
+	sender := &mockSender{pinnedMessageID: testBoardID}
+	repository := &mockRepo{data: data}
+	newService(sender, repository, tuesday).RefreshBoard()
+
+	if len(sender.sent) != 2 {
+		t.Fatalf("отправляются только игры без сообщения, отправлено %d", len(sender.sent))
+	}
+	games := repository.data.Games
+	if games[0].MessageID != 101 || games[1].MessageID != 102 || games[2].MessageID != 60 {
+		t.Fatalf("номера новых сообщений сохраняются: %+v", games)
+	}
+	first := sender.sent[0].(tgbotapi.MessageConfig)
+	if first.ParseMode != tgbotapi.ModeHTML || first.ReplyMarkup == nil {
+		t.Errorf("сообщение игры с кнопками в HTML: %+v", first)
+	}
+	if repository.saves != 1 {
+		t.Errorf("данные сохраняются один раз, saves=%d", repository.saves)
 	}
 }

@@ -40,7 +40,7 @@ func RenderBoard(games []storage.Game, chatID int64) string {
 	if len(finished) > 0 {
 		text.WriteString("\n<b>Прошедшие</b>\n")
 		for _, match := range finished {
-			fmt.Fprintf(&text, "%s · было %d\n", gameLink(match, chatID), Count(&match))
+			fmt.Fprintf(&text, "%s · было %d\n", gameLink(match, chatID), Attended(&match))
 		}
 	}
 	return strings.TrimRight(text.String(), "\n")

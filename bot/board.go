@@ -12,8 +12,9 @@ import (
 	"volleyball_inline_bot/storage"
 )
 
-// RefreshBoard обновляет доску и проверяет, что она закреплена.
-// Вызывается при старте бота и по расписанию раз в час.
+// RefreshBoard отправляет сообщения игр, у которых их ещё нет, затем
+// обновляет доску и проверяет, что она закреплена. Вызывается при старте
+// бота и по расписанию раз в час.
 func (s *Service) RefreshBoard() {
 	s.mutex.Lock()
 	defer s.mutex.Unlock()
@@ -23,7 +24,39 @@ func (s *Service) RefreshBoard() {
 		log.Printf("Ошибка чтения хранилища: %v", err)
 		return
 	}
+	if s.sendMissingGames(&data) {
+		if err := s.repository.Save(data); err != nil {
+			log.Printf("Сообщения игр отправлены, но не сохранены: %v", err)
+			return
+		}
+	}
 	s.updateBoardAndSave(&data)
+}
+
+// sendMissingGames отправляет сообщения для игр с message_id 0: так игру
+// можно добавить или восстановить, вписав её в файл данных вручную.
+// Возвращает true, если что-то отправлено.
+func (s *Service) sendMissingGames(data *storage.Data) bool {
+	sent := false
+	for index := range data.Games {
+		match := &data.Games[index]
+		if match.MessageID != 0 {
+			continue
+		}
+		text, keyboard := game.RenderGame(match)
+		message := tgbotapi.NewMessage(s.chatID, text)
+		message.ParseMode = tgbotapi.ModeHTML
+		message.ReplyMarkup = keyboard
+		sentMessage, err := s.sender.Send(message)
+		if err != nil {
+			log.Printf("Не удалось отправить сообщение игры %s: %v", match.Date, err)
+			continue
+		}
+		match.MessageID = sentMessage.MessageID
+		sent = true
+		log.Printf("Отправлено сообщение игры %s: %d", match.Date, sentMessage.MessageID)
+	}
+	return sent
 }
 
 // updateBoardAndSave обновляет доску по уже сохранённым данным и, если

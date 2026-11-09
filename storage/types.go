@@ -39,17 +39,39 @@ type Announce struct {
 	SentAt    int64 `json:"sent_at"` // unix-время
 }
 
-// Payment описывает оплату зала после игры.
+// Шаги оформления оплаты в Draft.Step.
+const (
+	StepCame    = "came"    // ждём, сколько было людей
+	StepAbsent  = "absent"  // ждём отметки неявки
+	StepTotal   = "total"   // ждём сумму и реквизиты
+	StepConfirm = "confirm" // ждём «Отправить в группу» или «Заново»
+)
+
+// Payment описывает оплату зала после игры. Поля кроме Draft заполняются,
+// когда плательщик отправил оплату в группу (RenterID не 0).
 type Payment struct {
-	AwaitingUserID  int64   `json:"awaiting_user_id"`  // кто нажал «Я оплатил зал» и ещё не ответил
-	PromptMessageID int     `json:"prompt_message_id"` // сообщение бота с ForceReply
-	RenterID        int64   `json:"renter_id"`
-	Requisites      string  `json:"requisites"`
-	Total           int     `json:"total"`
-	PerPerson       int     `json:"per_person"`
-	PaidUserIDs     []int64 `json:"paid_user_ids"`
-	SetAt           int64   `json:"set_at"` // unix-время указания реквизитов
-	Reminded        bool    `json:"reminded"`
+	RenterID    int64    `json:"renter_id"`
+	RenterName  string   `json:"renter_name"`
+	Requisites  string   `json:"requisites"`
+	Came        int      `json:"came"`   // сколько было, со слов плательщика
+	Absent      []string `json:"absent"` // строки списка: "<user_id>" или "<user_id>#<n>" для n-го друга
+	Total       int      `json:"total"`
+	PerPerson   int      `json:"per_person"`
+	MessageID   int      `json:"message_id"` // сообщение оплаты в группе
+	PaidUserIDs []int64  `json:"paid_user_ids"`
+	Draft       *Draft   `json:"draft,omitempty"`
+}
+
+// Draft описывает оформление оплаты в личке, ещё не отправленное в группу.
+type Draft struct {
+	UserID     int64    `json:"user_id"`
+	UserName   string   `json:"user_name"`
+	Step       string   `json:"step"`
+	Came       int      `json:"came"`
+	Absent     []string `json:"absent"`
+	Requisites string   `json:"requisites"`
+	Total      int      `json:"total"`
+	StartedAt  int64    `json:"started_at"` // unix-время
 }
 
 // Store читает и пишет Data в JSON-файл. Конкурентный доступ не защищён:

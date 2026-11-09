@@ -14,12 +14,22 @@ import (
 // textClosed показывается при нажатии на прошедшую или неизвестную игру.
 const textClosed = "Запись на эту игру закрыта"
 
-// HandleUpdate разбирает апдейт. Нажатия кнопок из других чатов
-// и все прочие апдейты пропускаются.
+// HandleUpdate разбирает апдейт: нажатия в группе, нажатия и сообщения
+// в личке с ботом. Остальное пропускается.
 func (s *Service) HandleUpdate(update tgbotapi.Update) {
-	if update.CallbackQuery != nil {
+	switch {
+	case update.CallbackQuery != nil && isPrivate(update.CallbackQuery.Message):
+		s.HandlePrivateCallback(update.CallbackQuery)
+	case update.CallbackQuery != nil:
 		s.HandleCallback(update.CallbackQuery)
+	case update.Message != nil && isPrivate(update.Message) && update.Message.From != nil:
+		s.HandlePrivateMessage(update.Message)
 	}
+}
+
+// isPrivate сообщает, что сообщение из лички с ботом.
+func isPrivate(message *tgbotapi.Message) bool {
+	return message != nil && message.Chat != nil && message.Chat.IsPrivate()
 }
 
 // HandleCallback обрабатывает нажатие кнопки записи в сообщении игры.
@@ -44,6 +54,10 @@ func (s *Service) HandleCallback(query *tgbotapi.CallbackQuery) {
 		return
 	}
 	match := findGame(data.Games, date)
+	if match != nil && action == game.ActionHall {
+		s.startPayment(query, &data, match)
+		return
+	}
 	if match == nil || match.Finished {
 		s.alert(query.ID, textClosed)
 		return

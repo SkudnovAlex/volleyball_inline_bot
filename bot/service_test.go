@@ -89,7 +89,13 @@ func wednesday() time.Time {
 }
 
 func newService(sender *mockSender, repository *mockRepo, now func() time.Time) *Service {
-	service := New(sender, repository, -1001, time.UTC, testGameDays, testDeleteAfterDays)
+	service := New(sender, repository, Settings{
+		ChatID:          -1001,
+		Location:        time.UTC,
+		GameDays:        testGameDays,
+		DeleteAfterDays: testDeleteAfterDays,
+		BotUserName:     "LiberoCoachBot",
+	})
 	service.now = now
 	return service
 }
