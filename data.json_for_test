@@ -1,0 +1,442 @@
+{
+  "board_message_id": 60,
+  "games": [
+    {
+      "date": "2026-11-02",
+      "message_id": 62,
+      "finished": true,
+      "players": [
+        {
+          "user_id": 1001,
+          "name": "Мария",
+          "status": "going",
+          "friends": 0
+        },
+        {
+          "user_id": 1002,
+          "name": "Сергей Дорохов",
+          "status": "going",
+          "friends": 1
+        },
+        {
+          "user_id": 1003,
+          "name": "Кристина Качанова",
+          "status": "going",
+          "friends": 0
+        },
+        {
+          "user_id": 1004,
+          "name": "Дима Ошкин",
+          "status": "declined",
+          "friends": 2
+        },
+        {
+          "user_id": 1005,
+          "name": "Надя",
+          "status": "going",
+          "friends": 0
+        },
+        {
+          "user_id": 1006,
+          "name": "Антон Шишкин",
+          "status": "going",
+          "friends": 0
+        },
+        {
+          "user_id": 1007,
+          "name": "Денис Буданов",
+          "status": "going",
+          "friends": 0
+        },
+        {
+          "user_id": 851787696,
+          "name": "Aleksandr",
+          "status": "going",
+          "friends": 1
+        },
+        {
+          "user_id": 1011,
+          "name": "Артем волейбол",
+          "status": "going",
+          "friends": 0
+        },
+        {
+          "user_id": 1012,
+          "name": "Georgi Ba",
+          "status": "going",
+          "friends": 0
+        }
+      ],
+      "payment": {
+        "renter_id": 1007,
+        "renter_name": "Денис Буданов",
+        "requisites": "Т-Банк +7 900 123-45-67",
+        "came": 12,
+        "absent": [
+          "1003"
+        ],
+        "total": 7200,
+        "per_person": 600,
+        "message_id": 69,
+        "paid_user_ids": [
+          1001,
+          1004,
+          851787696,
+          1012
+        ]
+      }
+    },
+    {
+      "date": "2026-11-05",
+      "message_id": 63,
+      "finished": true,
+      "players": [
+        {
+          "user_id": 1001,
+          "name": "Мария",
+          "status": "going",
+          "friends": 0
+        },
+        {
+          "user_id": 1002,
+          "name": "Сергей Дорохов",
+          "status": "going",
+          "friends": 0
+        },
+        {
+          "user_id": 1005,
+          "name": "Надя",
+          "status": "going",
+          "friends": 1
+        },
+        {
+          "user_id": 851787696,
+          "name": "Aleksandr",
+          "status": "going",
+          "friends": 0
+        },
+        {
+          "user_id": 1011,
+          "name": "Артем волейбол",
+          "status": "going",
+          "friends": 0
+        },
+        {
+          "user_id": 1008,
+          "name": "Наталья",
+          "status": "declined",
+          "friends": 0
+        },
+        {
+          "user_id": 1013,
+          "name": "Андрей",
+          "status": "going",
+          "friends": 0
+        }
+      ]
+    },
+    {
+      "date": "2026-11-08",
+      "message_id": 64,
+      "finished": true,
+      "players": [
+        {
+          "user_id": 1001,
+          "name": "Мария",
+          "status": "going",
+          "friends": 0
+        },
+        {
+          "user_id": 1006,
+          "name": "Антон Шишкин",
+          "status": "going",
+          "friends": 0
+        },
+        {
+          "user_id": 1007,
+          "name": "Денис Буданов",
+          "status": "going",
+          "friends": 1
+        },
+        {
+          "user_id": 1011,
+          "name": "Артем волейбол",
+          "status": "going",
+          "friends": 0
+        }
+      ],
+      "payment": {
+        "renter_id": 0,
+        "renter_name": "",
+        "requisites": "",
+        "came": 0,
+        "absent": null,
+        "total": 0,
+        "per_person": 0,
+        "message_id": 0,
+        "paid_user_ids": null,
+        "draft": {
+          "user_id": 1012,
+          "user_name": "Georgi Ba",
+          "step": "total",
+          "came": 4,
+          "absent": [
+            "1011",
+            "1007#1",
+            "1006"
+          ],
+          "requisites": "Кенн",
+          "total": 0,
+          "started_at": 1794240750
+        }
+      }
+    },
+    {
+      "date": "2026-11-12",
+      "message_id": 65,
+      "finished": false,
+      "players": [
+        {
+          "user_id": 1001,
+          "name": "Мария",
+          "status": "going",
+          "friends": 0
+        },
+        {
+          "user_id": 1002,
+          "name": "Сергей Дорохов",
+          "status": "going",
+          "friends": 2
+        },
+        {
+          "user_id": 1003,
+          "name": "Кристина Качанова",
+          "status": "going",
+          "friends": 0
+        },
+        {
+          "user_id": 1005,
+          "name": "Надя",
+          "status": "going",
+          "friends": 0
+        },
+        {
+          "user_id": 1006,
+          "name": "Антон Шишкин",
+          "status": "going",
+          "friends": 0
+        },
+        {
+          "user_id": 1007,
+          "name": "Денис Буданов",
+          "status": "going",
+          "friends": 0
+        },
+        {
+          "user_id": 1008,
+          "name": "Наталья",
+          "status": "going",
+          "friends": 0
+        },
+        {
+          "user_id": 1009,
+          "name": "Nicholas",
+          "status": "going",
+          "friends": 0
+        },
+        {
+          "user_id": 1010,
+          "name": "Эльдар",
+          "status": "going",
+          "friends": 0
+        },
+        {
+          "user_id": 851787696,
+          "name": "Aleksandr",
+          "status": "declined",
+          "friends": 0
+        },
+        {
+          "user_id": 1004,
+          "name": "Дима Ошкин",
+          "status": "declined",
+          "friends": 0
+        }
+      ]
+    },
+    {
+      "date": "2026-11-15",
+      "message_id": 66,
+      "finished": false,
+      "players": [
+        {
+          "user_id": 1001,
+          "name": "Мария",
+          "status": "going",
+          "friends": 0
+        },
+        {
+          "user_id": 1004,
+          "name": "Дима Ошкин",
+          "status": "going",
+          "friends": 0
+        },
+        {
+          "user_id": 1005,
+          "name": "Надя",
+          "status": "",
+          "friends": 2
+        },
+        {
+          "user_id": 1011,
+          "name": "Артем волейбол",
+          "status": "going",
+          "friends": 0
+        },
+        {
+          "user_id": 1008,
+          "name": "Наталья",
+          "status": "declined",
+          "friends": 0
+        },
+        {
+          "user_id": 1002,
+          "name": "Сергей Дорохов",
+          "status": "declined",
+          "friends": 1
+        },
+        {
+          "user_id": 1013,
+          "name": "Андрей",
+          "status": "declined",
+          "friends": 0
+        },
+        {
+          "user_id": 851787696,
+          "name": "Aleksandr",
+          "status": "going",
+          "friends": 0
+        }
+      ]
+    },
+    {
+      "date": "2026-11-16",
+      "message_id": 67,
+      "finished": false,
+      "players": [
+        {
+          "user_id": 851787696,
+          "name": "Aleksandr",
+          "status": "going",
+          "friends": 0
+        },
+        {
+          "user_id": 1012,
+          "name": "Georgi Ba",
+          "status": "going",
+          "friends": 0
+        },
+        {
+          "user_id": 1013,
+          "name": "Андрей",
+          "status": "going",
+          "friends": 0
+        }
+      ]
+    },
+    {
+      "date": "2026-11-19",
+      "message_id": 68,
+      "finished": false,
+      "players": [
+        {
+          "user_id": 1001,
+          "name": "Мария",
+          "status": "going",
+          "friends": 0
+        },
+        {
+          "user_id": 1002,
+          "name": "Сергей Дорохов",
+          "status": "going",
+          "friends": 0
+        },
+        {
+          "user_id": 1003,
+          "name": "Кристина Качанова",
+          "status": "going",
+          "friends": 0
+        },
+        {
+          "user_id": 1004,
+          "name": "Дима Ошкин",
+          "status": "going",
+          "friends": 0
+        },
+        {
+          "user_id": 1005,
+          "name": "Надя",
+          "status": "going",
+          "friends": 0
+        },
+        {
+          "user_id": 1006,
+          "name": "Антон Шишкин",
+          "status": "going",
+          "friends": 0
+        },
+        {
+          "user_id": 1007,
+          "name": "Денис Буданов",
+          "status": "going",
+          "friends": 0
+        },
+        {
+          "user_id": 1008,
+          "name": "Наталья",
+          "status": "going",
+          "friends": 0
+        },
+        {
+          "user_id": 1009,
+          "name": "Nicholas",
+          "status": "going",
+          "friends": 0
+        },
+        {
+          "user_id": 1012,
+          "name": "Georgi Ba",
+          "status": "going",
+          "friends": 0
+        },
+        {
+          "user_id": 1011,
+          "name": "Артем волейбол",
+          "status": "going",
+          "friends": 1
+        },
+        {
+          "user_id": 851787696,
+          "name": "Aleksandr",
+          "status": "declined",
+          "friends": 0
+        },
+        {
+          "user_id": 1013,
+          "name": "Андрей",
+          "status": "declined",
+          "friends": 0
+        }
+      ],
+      "announce": {
+        "message_id": 70,
+        "full": true,
+        "sent_at": 1794240255
+      }
+    }
+  ],
+  "requisites": {
+    "1002": "Сбер +7 911 000-00-02",
+    "1007": "Т-Банк +7 900 123-45-67"
+  }
+}
