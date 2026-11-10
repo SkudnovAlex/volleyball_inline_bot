@@ -1,94 +1,9 @@
 {
-  "board_message_id": 60,
+  "board_message_id": 82,
   "games": [
     {
-      "date": "2026-11-02",
-      "message_id": 62,
-      "finished": true,
-      "players": [
-        {
-          "user_id": 1001,
-          "name": "Мария",
-          "status": "going",
-          "friends": 0
-        },
-        {
-          "user_id": 1002,
-          "name": "Сергей Дорохов",
-          "status": "going",
-          "friends": 1
-        },
-        {
-          "user_id": 1003,
-          "name": "Кристина Качанова",
-          "status": "going",
-          "friends": 0
-        },
-        {
-          "user_id": 1004,
-          "name": "Дима Ошкин",
-          "status": "declined",
-          "friends": 2
-        },
-        {
-          "user_id": 1005,
-          "name": "Надя",
-          "status": "going",
-          "friends": 0
-        },
-        {
-          "user_id": 1006,
-          "name": "Антон Шишкин",
-          "status": "going",
-          "friends": 0
-        },
-        {
-          "user_id": 1007,
-          "name": "Денис Буданов",
-          "status": "going",
-          "friends": 0
-        },
-        {
-          "user_id": 851787696,
-          "name": "Aleksandr",
-          "status": "going",
-          "friends": 1
-        },
-        {
-          "user_id": 1011,
-          "name": "Артем волейбол",
-          "status": "going",
-          "friends": 0
-        },
-        {
-          "user_id": 1012,
-          "name": "Georgi Ba",
-          "status": "going",
-          "friends": 0
-        }
-      ],
-      "payment": {
-        "renter_id": 1007,
-        "renter_name": "Денис Буданов",
-        "requisites": "Т-Банк +7 900 123-45-67",
-        "came": 12,
-        "absent": [
-          "1003"
-        ],
-        "total": 7200,
-        "per_person": 600,
-        "message_id": 69,
-        "paid_user_ids": [
-          1001,
-          1004,
-          851787696,
-          1012
-        ]
-      }
-    },
-    {
       "date": "2026-11-05",
-      "message_id": 63,
+      "message_id": 85,
       "finished": true,
       "players": [
         {
@@ -133,11 +48,25 @@
           "status": "going",
           "friends": 0
         }
-      ]
+      ],
+      "payment": {
+        "renter_id": 1002,
+        "renter_name": "Сергей Дорохов",
+        "requisites": "Сбер +7 911 000-00-02",
+        "came": 7,
+        "absent": [],
+        "total": 3500,
+        "per_person": 500,
+        "message_id": 91,
+        "paid_user_ids": [
+          1001,
+          1011
+        ]
+      }
     },
     {
       "date": "2026-11-08",
-      "message_id": 64,
+      "message_id": 86,
       "finished": true,
       "players": [
         {
@@ -193,7 +122,7 @@
     },
     {
       "date": "2026-11-12",
-      "message_id": 65,
+      "message_id": 87,
       "finished": false,
       "players": [
         {
@@ -266,7 +195,7 @@
     },
     {
       "date": "2026-11-15",
-      "message_id": 66,
+      "message_id": 88,
       "finished": false,
       "players": [
         {
@@ -321,7 +250,7 @@
     },
     {
       "date": "2026-11-16",
-      "message_id": 67,
+      "message_id": 89,
       "finished": false,
       "players": [
         {
@@ -346,7 +275,7 @@
     },
     {
       "date": "2026-11-19",
-      "message_id": 68,
+      "message_id": 90,
       "finished": false,
       "players": [
         {
@@ -433,6 +362,12 @@
         "full": true,
         "sent_at": 1794240255
       }
+    },
+    {
+      "date": "2026-11-17",
+      "message_id": 84,
+      "finished": false,
+      "players": null
     }
   ],
   "requisites": {
