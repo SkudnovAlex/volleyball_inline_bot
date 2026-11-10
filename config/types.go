@@ -2,7 +2,8 @@ package config
 
 import "time"
 
-// Config хранит конфигурацию приложения.
+// Config хранит конфигурацию приложения. FinishSchedule вычисляется из GAME_TIME и FINISH_AFTER: ежедневно в момент
+// закрытия игры.
 type Config struct {
 	BotToken           string
 	ChatID             int64
@@ -10,9 +11,11 @@ type Config struct {
 	Schedule           string
 	CleanupSchedule    string
 	BoardCheckSchedule string
+	FinishSchedule     string
 	Location           *time.Location
 	GameDays           map[time.Weekday]bool
 	GameTime           string
+	FinishAfter        time.Duration
 	DeleteAfterDays    int
 	CreateDaysAhead    int
 	PlayersLimit       int

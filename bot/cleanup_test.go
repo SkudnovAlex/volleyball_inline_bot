@@ -41,30 +41,13 @@ func TestCleanupGames(t *testing.T) {
 	if len(games) != 4 || games[0].Date != "2026-10-28" {
 		t.Fatalf("игра 27.10 должна уйти из данных: %+v", games)
 	}
-	if !games[1].Finished {
-		t.Errorf("вчерашняя игра 09.11 должна стать прошедшей: %+v", games[1])
-	}
-	if games[2].Finished || games[3].Finished {
-		t.Errorf("сегодняшняя и будущая игры остаются открытыми: %+v", games[2:])
+	if games[1].Finished {
+		t.Errorf("очистка не закрывает игры, это делает FinishGames: %+v", games[1])
 	}
 
-	var gameEdit, boardEdit *tgbotapi.EditMessageTextConfig
-	for _, edit := range edits(sender.requested) {
-		switch edit.MessageID {
-		case 4:
-			gameEdit = &edit
-		case testBoardID:
-			boardEdit = &edit
-		default:
-			t.Errorf("лишнее редактирование сообщения %d", edit.MessageID)
-		}
-	}
-	if gameEdit == nil || gameEdit.ReplyMarkup == nil || len(gameEdit.ReplyMarkup.InlineKeyboard) != 1 ||
-		*gameEdit.ReplyMarkup.InlineKeyboard[0][0].CallbackData != "hall:2026-11-09" {
-		t.Errorf("у прошедшей игры вместо кнопок записи кнопка оплаты: %+v", gameEdit)
-	}
-	if boardEdit == nil {
-		t.Errorf("после очистки обновляется доска")
+	gameEdits := edits(sender.requested)
+	if len(gameEdits) != 1 || gameEdits[0].MessageID != testBoardID {
+		t.Errorf("после очистки обновляется только доска: %+v", gameEdits)
 	}
 }
 
@@ -129,7 +112,7 @@ func TestCleanupGames_OverdueUnfinishedDeleted(t *testing.T) {
 	newService(sender, repository, tuesday).CleanupGames()
 
 	if len(repository.data.Games) != 0 || len(edits(sender.requested)) != 1 {
-		t.Fatalf("старая игра удаляется сразу, без перехода в «прошла»: games=%+v edits=%d",
+		t.Fatalf("старая игра удаляется сразу, без перехода в \"прошла\": games=%+v edits=%d",
 			repository.data.Games, len(edits(sender.requested)))
 	}
 }

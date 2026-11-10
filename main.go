@@ -42,6 +42,7 @@ func main() {
 		Location:         settings.Location,
 		GameDays:         settings.GameDays,
 		DeleteAfterDays:  settings.DeleteAfterDays,
+		FinishAfter:      settings.FinishAfter,
 		CreateDaysAhead:  settings.CreateDaysAhead,
 		AnnounceCooldown: settings.AnnounceCooldown,
 		DraftLock:        settings.PaymentDraftLock,
@@ -56,6 +57,7 @@ func main() {
 		job      func()
 	}{
 		{"CRON_SCHEDULE", settings.Schedule, service.CreateGame},
+		{"GAME_TIME + FINISH_AFTER", settings.FinishSchedule, service.FinishGames},
 		{"CLEANUP_SCHEDULE", settings.CleanupSchedule, service.CleanupGames},
 		{"BOARD_CHECK_SCHEDULE", settings.BoardCheckSchedule, service.RefreshBoard},
 	}
@@ -67,14 +69,16 @@ func main() {
 
 	// При старте сразу выполняем задачи расписания: бот мог быть выключен в момент их запуска. Затем перерисовываем
 	// сообщения игр (оформление могло измениться с обновлением бота) и доску.
+	service.FinishGames()
 	service.CleanupGames()
 	service.CreateGame()
 	service.RedrawGames()
 	service.RefreshBoard()
 
 	planner.Start()
-	log.Printf("Планировщик запущен (создание: %q, очистка: %q, доска: %q, зона: %s)",
-		settings.Schedule, settings.CleanupSchedule, settings.BoardCheckSchedule, settings.Location)
+	log.Printf("Планировщик запущен (создание: %q, закрытие игр: %q, очистка: %q, доска: %q, зона: %s)",
+		settings.Schedule, settings.FinishSchedule, settings.CleanupSchedule, settings.BoardCheckSchedule,
+		settings.Location)
 
 	updatesConfig := tgbotapi.NewUpdate(0)
 	updatesConfig.Timeout = updatesTimeout

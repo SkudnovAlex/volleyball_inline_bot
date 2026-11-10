@@ -11,8 +11,8 @@ import (
 	"volleyball_inline_bot/storage"
 )
 
-// CleanupGames помечает игры с датой раньше сегодняшней как прошедшие и удаляет из чата и из данных игры старше
-// deleteAfterDays дней.
+// CleanupGames удаляет из чата и из данных игры, с даты которых прошло deleteAfterDays дней. Закрытие прошедших игр
+// выполняет FinishGames.
 func (s *Service) CleanupGames() {
 	s.mutex.Lock()
 	defer s.mutex.Unlock()
@@ -23,10 +23,8 @@ func (s *Service) CleanupGames() {
 		return
 	}
 
-	now := s.now()
-	today := now.Format(game.DateLayout)
 	// Игра удаляется, когда с её даты прошло deleteAfterDays дней.
-	deleteUpTo := now.AddDate(0, 0, -s.deleteAfterDays).Format(game.DateLayout)
+	deleteUpTo := s.now().AddDate(0, 0, -s.deleteAfterDays).Format(game.DateLayout)
 
 	remaining := make([]storage.Game, 0, len(data.Games))
 	changed := false
@@ -36,14 +34,6 @@ func (s *Service) CleanupGames() {
 			if s.deleteGame(match) {
 				continue
 			}
-			remaining = append(remaining, match)
-			continue
-		}
-		if match.Date < today && !match.Finished {
-			changed = true
-			match.Finished = true
-			s.editGame(&match)
-			log.Printf("Игра %s прошла", match.Date)
 		}
 		remaining = append(remaining, match)
 	}

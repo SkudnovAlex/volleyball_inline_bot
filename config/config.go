@@ -17,13 +17,13 @@ import (
 
 // weekdayByName сопоставляет англоязычное название дня недели с time.Weekday.
 var weekdayByName = map[string]time.Weekday{
-	"sunday":    time.Sunday,
 	"monday":    time.Monday,
 	"tuesday":   time.Tuesday,
 	"wednesday": time.Wednesday,
 	"thursday":  time.Thursday,
 	"friday":    time.Friday,
 	"saturday":  time.Saturday,
+	"sunday":    time.Sunday,
 }
 
 // Load читает конфигурацию из .env (если есть) и переменных окружения. Незаданные необязательные переменные получают
@@ -60,9 +60,20 @@ func Load() (*Config, error) {
 	}
 
 	gameTime := getenvDefault("GAME_TIME", defaultGameTime)
-	if _, err := time.Parse("15:04", gameTime); err != nil {
+	gameClock, err := time.Parse("15:04", gameTime)
+	if err != nil {
 		return nil, fmt.Errorf("некорректный GAME_TIME %q: нужен формат ЧЧ:ММ, например 19:00", gameTime)
 	}
+
+	finishAfter, err := positiveDuration("FINISH_AFTER", defaultFinishAfter)
+	if err != nil {
+		return nil, err
+	}
+	// Расписание закрытия срабатывает раз в минуту по часам, поэтому длительность задаётся целыми минутами.
+	if finishAfter%time.Minute != 0 {
+		return nil, fmt.Errorf("некорректный FINISH_AFTER: нужно целое число минут, например 60m или 1h30m")
+	}
+	finishClock := gameClock.Add(finishAfter)
 
 	settings := &Config{
 		BotToken:           token,
@@ -74,6 +85,8 @@ func Load() (*Config, error) {
 		Location:           location,
 		GameDays:           gameDays,
 		GameTime:           gameTime,
+		FinishAfter:        finishAfter,
+		FinishSchedule:     fmt.Sprintf("%d %d * * *", finishClock.Minute(), finishClock.Hour()),
 	}
 
 	numbers := []struct {

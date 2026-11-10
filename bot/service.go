@@ -28,6 +28,8 @@ type Settings struct {
 	GameDays map[time.Weekday]bool
 	// DeleteAfterDays задаёт, через сколько дней после игры удалить её сообщение.
 	DeleteAfterDays int
+	// FinishAfter задаёт, через сколько после начала игры закрывается запись и появляется кнопка оплаты зала.
+	FinishAfter time.Duration
 	// CreateDaysAhead задаёт, за сколько дней до игры создаётся её сообщение.
 	CreateDaysAhead int
 	// AnnounceCooldown задаёт, сколько времени после объявления бот редактирует его вместо отправки нового.
@@ -46,6 +48,7 @@ type Service struct {
 	chatID           int64
 	gameDays         map[time.Weekday]bool
 	deleteAfterDays  int
+	finishAfter      time.Duration
 	createDaysAhead  int
 	announceCooldown time.Duration
 	draftLock        time.Duration
@@ -61,6 +64,7 @@ func New(sender Sender, repository Repository, settings Settings) *Service {
 		chatID:           settings.ChatID,
 		gameDays:         settings.GameDays,
 		deleteAfterDays:  settings.DeleteAfterDays,
+		finishAfter:      settings.FinishAfter,
 		createDaysAhead:  settings.CreateDaysAhead,
 		announceCooldown: settings.AnnounceCooldown,
 		draftLock:        settings.DraftLock,

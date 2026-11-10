@@ -34,8 +34,8 @@ func TestLoad_OK_WithDefaults(t *testing.T) {
 	if settings.Location == nil || settings.Location.String() != defaultTimezone {
 		t.Errorf("Location = %v, ожидался дефолт %q", settings.Location, defaultTimezone)
 	}
-	if settings.DeleteAfterDays != 14 {
-		t.Errorf("DeleteAfterDays = %d, ожидался дефолт 14", settings.DeleteAfterDays)
+	if settings.DeleteAfterDays != 7 {
+		t.Errorf("DeleteAfterDays = %d, ожидался дефолт 7", settings.DeleteAfterDays)
 	}
 	// По умолчанию игровые: вторник, четверг, пятница, воскресенье.
 	wantDays := map[time.Weekday]bool{time.Tuesday: true, time.Thursday: true, time.Friday: true, time.Sunday: true}
@@ -158,6 +158,29 @@ func TestLoad_BadDeleteAfterDays(t *testing.T) {
 var newVariables = []string{
 	"GAME_TIME", "CREATE_DAYS_AHEAD", "PLAYERS_LIMIT", "MAX_FRIENDS", "ANNOUNCE_COOLDOWN", "PAYMENT_DRAFT_LOCK",
 	"PAYMENT_MAX_CAME", "PAYMENT_MIN_TOTAL", "PAYMENT_MAX_TOTAL", "PAYMENT_ROUND_TO", "BOARD_CHECK_SCHEDULE",
+	"FINISH_AFTER", "CLEANUP_SCHEDULE",
+}
+
+func TestLoad_FinishSchedule(t *testing.T) {
+	cases := []struct{ gameTime, finishAfter, want string }{
+		{"", "", "0 20 * * *"},
+		{"20:30", "90m", "0 22 * * *"},
+		{"23:30", "1h", "30 0 * * *"},
+	}
+	for _, testCase := range cases {
+		setRequired(t)
+		t.Setenv("GAME_TIME", testCase.gameTime)
+		t.Setenv("FINISH_AFTER", testCase.finishAfter)
+
+		settings, err := Load()
+		if err != nil {
+			t.Fatalf("неожиданная ошибка: %v", err)
+		}
+		if settings.FinishSchedule != testCase.want {
+			t.Errorf("GAME_TIME=%q FINISH_AFTER=%q: расписание %q, ожидалось %q",
+				testCase.gameTime, testCase.finishAfter, settings.FinishSchedule, testCase.want)
+		}
+	}
 }
 
 func setRequired(t *testing.T) {
@@ -179,7 +202,8 @@ func TestLoad_RulesDefaults(t *testing.T) {
 	if settings.GameTime != "19:00" || settings.CreateDaysAhead != 7 || settings.PlayersLimit != 12 ||
 		settings.MaxFriends != 4 || settings.AnnounceCooldown != 10*time.Minute || settings.PaymentDraftLock != time.Hour ||
 		settings.PaymentMaxCame != 30 || settings.PaymentMinTotal != 1000 || settings.PaymentMaxTotal != 10000 ||
-		settings.PaymentRoundTo != 10 || settings.BoardCheckSchedule != "0 * * * *" {
+		settings.PaymentRoundTo != 10 || settings.BoardCheckSchedule != "0 * * * *" ||
+		settings.FinishAfter != time.Hour || settings.CleanupSchedule != "10 0 * * *" {
 		t.Fatalf("значения по умолчанию: %+v", settings)
 	}
 }
@@ -218,6 +242,8 @@ func TestLoad_RulesInvalid(t *testing.T) {
 		{"ANNOUNCE_COOLDOWN", "10"},
 		{"ANNOUNCE_COOLDOWN", "0s"},
 		{"PAYMENT_DRAFT_LOCK", "час"},
+		{"FINISH_AFTER", "0s"},
+		{"FINISH_AFTER", "90s"},
 		{"PAYMENT_MAX_CAME", "0"},
 		{"PAYMENT_ROUND_TO", "0"},
 		{"PAYMENT_MIN_TOTAL", "20000"}, // больше максимума по умолчанию
