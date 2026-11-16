@@ -139,10 +139,13 @@ func TestRenderGame_FinishedPaidMarksAbsent(t *testing.T) {
 			{UserID: 1, Name: "Мария", Status: storage.StatusGoing},
 			{UserID: 2, Name: "Сергей", Status: storage.StatusGoing, Friends: 1},
 		},
-		Payment: &storage.Payment{RenterID: 1, Came: 9, Absent: []string{"2"}},
+		Payment: &storage.Payment{RenterID: 1, RenterName: "Мария", Came: 9, Absent: []string{"2"}, PerPerson: 800},
 	}
 
-	text, _ := RenderGame(game)
+	text, keyboard := RenderGame(game)
+	if keyboard != nil {
+		t.Errorf("после оплаты зала кнопок под игрой нет: %+v", keyboard)
+	}
 
 	want := strings.Join([]string{
 		"🏐 <b>Вторник 17.11 · игра прошла</b>",
@@ -151,6 +154,8 @@ func TestRenderGame_FinishedPaidMarksAbsent(t *testing.T) {
 		"1. Мария",
 		"2. Сергей · не пришёл",
 		"3.   └ друг",
+		"",
+		"💰 Зал оплатил(а): Мария · по 800 ₽",
 	}, "\n")
 	if text != want {
 		t.Fatalf("текст:\n%s\n\nожидалось:\n%s", text, want)

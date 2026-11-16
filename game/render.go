@@ -38,7 +38,8 @@ const (
 	barFree  = "▱"
 )
 
-// RenderGame возвращает текст сообщения игры в HTML и клавиатуру. У прошедшей игры одна кнопка "Я оплатил зал".
+// RenderGame возвращает текст сообщения игры в HTML и клавиатуру. У прошедшей игры одна кнопка "Я оплатил зал", после
+// оплаты кнопок нет, а под составом указано, кто оплатил зал.
 func RenderGame(game *storage.Game) (string, *tgbotapi.InlineKeyboardMarkup) {
 	var text strings.Builder
 	count := Count(game)
@@ -67,6 +68,10 @@ func RenderGame(game *storage.Game) (string, *tgbotapi.InlineKeyboardMarkup) {
 	}
 	if len(declined) > 0 && !game.Finished {
 		fmt.Fprintf(&text, "\n❌ Не смогут: %s\n", strings.Join(declined, ", "))
+	}
+	if IsPaid(game) {
+		fmt.Fprintf(&text, "\n💰 Зал оплатил(а): %s · по %d ₽\n", html.EscapeString(game.Payment.RenterName),
+			game.Payment.PerPerson)
 	}
 
 	return strings.TrimRight(text.String(), "\n"), buildKeyboard(game, count)
@@ -116,6 +121,11 @@ func DayTitle(date string) string {
 func buildKeyboard(game *storage.Game, count int) *tgbotapi.InlineKeyboardMarkup {
 	button := func(text, action string) tgbotapi.InlineKeyboardButton {
 		return tgbotapi.NewInlineKeyboardButtonData(text, action+":"+game.Date)
+	}
+	// После оплаты зала кнопок под игрой нет: перевод отмечают под сообщением оплаты. Без reply_markup Telegram убирает
+	// клавиатуру при редактировании.
+	if IsPaid(game) {
+		return nil
 	}
 	if game.Finished {
 		keyboard := tgbotapi.NewInlineKeyboardMarkup(
