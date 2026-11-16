@@ -11,6 +11,7 @@ type Config struct {
 	Schedule           string
 	CleanupSchedule    string
 	BoardCheckSchedule string
+	BoardRaiseSchedule string
 	FinishSchedule     string
 	Location           *time.Location
 	GameDays           map[time.Weekday]bool

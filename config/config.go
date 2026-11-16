@@ -82,6 +82,7 @@ func Load() (*Config, error) {
 		Schedule:           getenvDefault("CRON_SCHEDULE", defaultSchedule),
 		CleanupSchedule:    getenvDefault("CLEANUP_SCHEDULE", defaultCleanupSchedule),
 		BoardCheckSchedule: getenvDefault("BOARD_CHECK_SCHEDULE", defaultBoardCheckSchedule),
+		BoardRaiseSchedule: getenvDefault("BOARD_RAISE_SCHEDULE", defaultBoardRaiseSchedule),
 		Location:           location,
 		GameDays:           gameDays,
 		GameTime:           gameTime,

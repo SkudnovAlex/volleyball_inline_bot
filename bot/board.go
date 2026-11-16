@@ -12,8 +12,8 @@ import (
 	"volleyball_inline_bot/storage"
 )
 
-// RefreshBoard отправляет сообщения игр, у которых их ещё нет, затем обновляет доску и проверяет, что она закреплена.
-// Вызывается при старте бота и по расписанию раз в час.
+// RefreshBoard отправляет сообщения игр, у которых их ещё нет, обновляет доску и закрепляет её, если её открепили.
+// Вызывается при старте бота и по расписанию BOARD_CHECK_SCHEDULE.
 func (s *Service) RefreshBoard() {
 	s.mutex.Lock()
 	defer s.mutex.Unlock()
@@ -29,7 +29,30 @@ func (s *Service) RefreshBoard() {
 			return
 		}
 	}
+	previousID := data.BoardMessageID
 	s.updateBoardAndSave(&data)
+	// Только что отправленная доска самая новая и уже закреплена.
+	if data.BoardMessageID == previousID {
+		s.raiseBoard(&data, false)
+	}
+}
+
+// RaiseBoard поднимает доску наверх закрепа: если закреплено сообщение новее доски, отправляет доску заново.
+// Вызывается по расписанию BOARD_RAISE_SCHEDULE.
+func (s *Service) RaiseBoard() {
+	s.mutex.Lock()
+	defer s.mutex.Unlock()
+
+	data, err := s.repository.Load()
+	if err != nil {
+		log.Printf("Ошибка чтения хранилища: %v", err)
+		return
+	}
+	if s.raiseBoard(&data, true) {
+		if err := s.repository.Save(data); err != nil {
+			log.Printf("Новая доска %d отправлена, но не сохранена: %v", data.BoardMessageID, err)
+		}
+	}
 }
 
 // RedrawGames перерисовывает сообщения всех игр и оплат по текущим данным. Вызывается при старте, чтобы после обновления
@@ -133,8 +156,7 @@ func (s *Service) updateBoardAndSave(data *storage.Data) {
 	}
 }
 
-// updateBoard редактирует доску или отправляет новую, если её ещё нет или её удалили, и закрепляет её. Новый ID
-// записывается в data.
+// updateBoard редактирует доску или отправляет новую, если её ещё нет или её удалили. Новый ID записывается в data.
 func (s *Service) updateBoard(data *storage.Data) {
 	text := game.RenderBoard(data.Games, s.chatID)
 
@@ -145,7 +167,6 @@ func (s *Service) updateBoard(data *storage.Data) {
 		_, err := s.sender.Request(edit)
 		switch {
 		case err == nil || isNotModified(err):
-			s.ensurePinned(data.BoardMessageID)
 			return
 		case isMessageNotFound(err):
 			log.Printf("Доска %d удалена из чата, отправляю новую", data.BoardMessageID)
@@ -154,10 +175,15 @@ func (s *Service) updateBoard(data *storage.Data) {
 			return
 		}
 	}
+	s.sendBoard(data, text)
+}
 
+// sendBoard отправляет доску без звука и закрепляет её. Новый ID записывается в data.
+func (s *Service) sendBoard(data *storage.Data, text string) {
 	message := tgbotapi.NewMessage(s.chatID, text)
 	message.ParseMode = tgbotapi.ModeHTML
 	message.DisableWebPagePreview = true
+	message.DisableNotification = true
 	sentMessage, err := s.sender.Send(message)
 	if err != nil {
 		log.Printf("Не удалось отправить доску: %v", err)
@@ -168,24 +194,54 @@ func (s *Service) updateBoard(data *storage.Data) {
 	s.pin(sentMessage.MessageID)
 }
 
-// ensurePinned закрепляет доску, если последним закреплённым сообщением чата сейчас не она: Telegram не сообщает боту об
-// откреплении.
-func (s *Service) ensurePinned(boardMessageID int) {
+// raiseBoard делает доску последним закрепом, чтобы она показывалась в плашке сверху. Telegram показывает в плашке
+// закреп с самым новым сообщением, а не последний закрепленный, поэтому если закреплено сообщение новее доски, доска
+// отправляется заново, но только при resend: иначе новое сообщение в чате появлялось бы на каждую проверку. Если
+// последний закреп старше доски или закрепов нет, доску открепили, и она закрепляется снова. Если закреп новее доски,
+// узнать, закреплена ли доска, нельзя: это выяснится при переотправке. Возвращает true, если отправлена новая доска.
+func (s *Service) raiseBoard(data *storage.Data, resend bool) bool {
+	if data.BoardMessageID == 0 {
+		return false
+	}
 	response, err := s.sender.Request(tgbotapi.ChatInfoConfig{ChatConfig: tgbotapi.ChatConfig{ChatID: s.chatID}})
 	if err != nil {
 		log.Printf("Не удалось получить закреп чата: %v", err)
-		return
+		return false
 	}
 	var chat tgbotapi.Chat
 	if err := json.Unmarshal(response.Result, &chat); err != nil {
 		log.Printf("Не удалось разобрать ответ getChat: %v", err)
-		return
+		return false
 	}
-	if chat.PinnedMessage != nil && chat.PinnedMessage.MessageID == boardMessageID {
-		return
+
+	oldID := data.BoardMessageID
+	switch pinned := chat.PinnedMessage; {
+	case pinned != nil && pinned.MessageID == oldID:
+		return false
+	case pinned == nil || pinned.MessageID < oldID:
+		log.Printf("Доска %d не в закрепе, закрепляю снова", oldID)
+		s.pin(oldID)
+		return false
+	case !resend:
+		return false
+	default:
+		log.Printf("Закреплено сообщение %d новее доски %d, отправляю доску заново", pinned.MessageID, oldID)
 	}
-	log.Printf("Доска %d не в закрепе, закрепляю снова", boardMessageID)
-	s.pin(boardMessageID)
+
+	unpin := tgbotapi.UnpinChatMessageConfig{ChatID: s.chatID, MessageID: oldID}
+	if _, err := s.sender.Request(unpin); err != nil {
+		log.Printf("Не удалось открепить доску %d: %v", oldID, err)
+	}
+	s.sendBoard(data, game.RenderBoard(data.Games, s.chatID))
+	if data.BoardMessageID == oldID {
+		// Новая доска не отправилась: возвращаем в закреп старую.
+		s.pin(oldID)
+		return false
+	}
+	if _, err := s.sender.Request(tgbotapi.NewDeleteMessage(s.chatID, oldID)); err != nil {
+		log.Printf("Не удалось удалить старую доску %d, удалите её вручную: %v", oldID, err)
+	}
+	return true
 }
 
 // pin закрепляет сообщение без уведомления участникам.

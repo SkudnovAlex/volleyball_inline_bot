@@ -6,6 +6,7 @@ const (
 	defaultSchedule           = "0 20 * * *"
 	defaultCleanupSchedule    = "10 0 * * *"
 	defaultBoardCheckSchedule = "0 * * * *"
+	defaultBoardRaiseSchedule = "15 0 * * *"
 	defaultTimezone           = "Europe/Moscow"
 	defaultGameDays           = "Tuesday,Thursday,Friday,Sunday"
 	defaultGameTime           = "19:00"

@@ -158,7 +158,7 @@ func TestLoad_BadDeleteAfterDays(t *testing.T) {
 var newVariables = []string{
 	"GAME_TIME", "CREATE_DAYS_AHEAD", "PLAYERS_LIMIT", "MAX_FRIENDS", "ANNOUNCE_COOLDOWN", "PAYMENT_DRAFT_LOCK",
 	"PAYMENT_MAX_CAME", "PAYMENT_MIN_TOTAL", "PAYMENT_MAX_TOTAL", "PAYMENT_ROUND_TO", "BOARD_CHECK_SCHEDULE",
-	"FINISH_AFTER", "CLEANUP_SCHEDULE",
+	"FINISH_AFTER", "CLEANUP_SCHEDULE", "BOARD_RAISE_SCHEDULE",
 }
 
 func TestLoad_FinishSchedule(t *testing.T) {
@@ -202,7 +202,7 @@ func TestLoad_RulesDefaults(t *testing.T) {
 	if settings.GameTime != "19:00" || settings.CreateDaysAhead != 7 || settings.PlayersLimit != 12 ||
 		settings.MaxFriends != 4 || settings.AnnounceCooldown != 10*time.Minute || settings.PaymentDraftLock != time.Hour ||
 		settings.PaymentMaxCame != 30 || settings.PaymentMinTotal != 1000 || settings.PaymentMaxTotal != 10000 ||
-		settings.PaymentRoundTo != 10 || settings.BoardCheckSchedule != "0 * * * *" ||
+		settings.PaymentRoundTo != 10 || settings.BoardCheckSchedule != "0 * * * *" || settings.BoardRaiseSchedule != "15 0 * * *" ||
 		settings.FinishAfter != time.Hour || settings.CleanupSchedule != "10 0 * * *" {
 		t.Fatalf("значения по умолчанию: %+v", settings)
 	}

@@ -57,9 +57,51 @@ func TestRefreshBoard_RepinsWhenUnpinned(t *testing.T) {
 		newService(sender, repository, tuesday).RefreshBoard()
 
 		if countPins(sender.requested) != 1 || len(sender.sent) != 0 {
-			t.Errorf("закреп %d: доска закрепляется заново без новой отправки, pins=%d sent=%d",
+			t.Errorf("закреп %d старше доски: доска закрепляется заново без новой отправки, pins=%d sent=%d",
 				pinned, countPins(sender.requested), len(sender.sent))
 		}
+	}
+}
+
+func TestRaiseBoard_ResendsWhenNewerPinned(t *testing.T) {
+	sender := &mockSender{pinnedMessageID: testBoardID + 50}
+	repository := &mockRepo{data: openGame(2)}
+	newService(sender, repository, tuesday).RaiseBoard()
+
+	if len(sender.sent) != 1 || repository.data.BoardMessageID != 101 {
+		t.Fatalf("закреп новее доски: доска отправляется заново, sent=%d id=%d",
+			len(sender.sent), repository.data.BoardMessageID)
+	}
+	if board := sender.sent[0].(tgbotapi.MessageConfig); !board.DisableNotification {
+		t.Errorf("новая доска отправляется без звука")
+	}
+
+	var unpinnedOld, pinnedNew bool
+	for _, request := range sender.requested {
+		switch config := request.(type) {
+		case tgbotapi.UnpinChatMessageConfig:
+			unpinnedOld = config.MessageID == testBoardID
+		case tgbotapi.PinChatMessageConfig:
+			pinnedNew = config.MessageID == 101
+		}
+	}
+	if !unpinnedOld || !pinnedNew {
+		t.Errorf("старая доска открепляется, новая закрепляется: unpin=%v pin=%v", unpinnedOld, pinnedNew)
+	}
+	if got := deletedIDs(sender.requested); len(got) != 1 || got[0] != testBoardID {
+		t.Errorf("старая доска удаляется: %v", got)
+	}
+}
+
+func TestHandleCallback_DoesNotCheckPin(t *testing.T) {
+	sender := &mockSender{pinnedMessageID: testBoardID + 50}
+	repository := &mockRepo{data: openGame(2)}
+	newService(sender, repository, tuesday).HandleCallback(press(&tgbotapi.User{ID: 7, FirstName: "Аня"}, "join:"+
+		repository.data.Games[0].Date, testChatID))
+
+	if len(sender.sent) != 0 || countPins(sender.requested) != 0 {
+		t.Fatalf("нажатие только редактирует игру и доску, закреп проверяется по расписанию: sent=%d pins=%d",
+			len(sender.sent), countPins(sender.requested))
 	}
 }
 
@@ -183,5 +225,16 @@ func TestRedrawGames_ResendsDeletedMessages(t *testing.T) {
 
 	if games := repository.data.Games; games[0].MessageID == 0 || games[0].Payment.MessageID == 0 {
 		t.Fatalf("после RefreshBoard игра и оплата отправлены заново: %+v", games[0])
+	}
+}
+
+func TestRefreshBoard_NewerPinWaitsForRaise(t *testing.T) {
+	sender := &mockSender{pinnedMessageID: testBoardID + 50}
+	repository := &mockRepo{data: openGame(2)}
+	newService(sender, repository, tuesday).RefreshBoard()
+
+	if len(sender.sent) != 0 || countPins(sender.requested) != 0 || len(deletedIDs(sender.requested)) != 0 {
+		t.Fatalf("ежечасная проверка не переотправляет доску, это делает RaiseBoard: sent=%d pins=%d",
+			len(sender.sent), countPins(sender.requested))
 	}
 }

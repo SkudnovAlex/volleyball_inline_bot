@@ -60,6 +60,7 @@ func main() {
 		{"GAME_TIME + FINISH_AFTER", settings.FinishSchedule, service.FinishGames},
 		{"CLEANUP_SCHEDULE", settings.CleanupSchedule, service.CleanupGames},
 		{"BOARD_CHECK_SCHEDULE", settings.BoardCheckSchedule, service.RefreshBoard},
+		{"BOARD_RAISE_SCHEDULE", settings.BoardRaiseSchedule, service.RaiseBoard},
 	}
 	for _, job := range jobs {
 		if err := scheduler.Add(planner, job.schedule, job.job); err != nil {
@@ -76,9 +77,9 @@ func main() {
 	service.RefreshBoard()
 
 	planner.Start()
-	log.Printf("Планировщик запущен (создание: %q, закрытие игр: %q, очистка: %q, доска: %q, зона: %s)",
+	log.Printf("Планировщик запущен (создание: %q, закрытие игр: %q, очистка: %q, доска: %q, подъем доски: %q, зона: %s)",
 		settings.Schedule, settings.FinishSchedule, settings.CleanupSchedule, settings.BoardCheckSchedule,
-		settings.Location)
+		settings.BoardRaiseSchedule, settings.Location)
 
 	updatesConfig := tgbotapi.NewUpdate(0)
 	updatesConfig.Timeout = updatesTimeout
