@@ -388,7 +388,7 @@ func TestPaid_MarksAndEdits(t *testing.T) {
 			paymentEdit = &edit
 		}
 	}
-	if paymentEdit == nil || !strings.Contains(paymentEdit.Text, "перевели 1 из 2") {
+	if paymentEdit == nil || !strings.Contains(paymentEdit.Text, "Перевели 1 из 2") {
 		t.Fatalf("сообщение оплаты перерисовано: %+v", paymentEdit)
 	}
 

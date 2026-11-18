@@ -2,6 +2,7 @@ package bot
 
 import (
 	"errors"
+	"slices"
 	"strings"
 	"testing"
 	"time"
@@ -251,7 +252,8 @@ func TestHandleCallback_AnnounceOpenedEditsRecent(t *testing.T) {
 func TestHandleCallback_AnnounceOpenedSendsAfterCooldown(t *testing.T) {
 	data := openGame(game.Current().Limit)
 	data.Games[0].Players[0] = storage.Player{UserID: maria.ID, Name: "Мария", Status: storage.StatusGoing}
-	data.Games[0].Announce = &storage.Announce{MessageID: 77, Full: true, SentAt: tuesday().Add(-time.Hour).Unix()}
+	data.Games[0].Announce = &storage.Announce{MessageID: 77, Full: true, SentAt: tuesday().Add(-time.Hour).Unix(),
+		PreviousIDs: []int{55}}
 
 	sender := &mockSender{pinnedMessageID: testBoardID}
 	repository := &mockRepo{data: data}
@@ -260,8 +262,12 @@ func TestHandleCallback_AnnounceOpenedSendsAfterCooldown(t *testing.T) {
 	if len(sender.sent) != 1 {
 		t.Fatalf("старое объявление: ожидалось новое сообщение, отправлено %d", len(sender.sent))
 	}
-	if announce := repository.data.Games[0].Announce; announce.MessageID != 101 || announce.Full {
+	announce := repository.data.Games[0].Announce
+	if announce.MessageID != 101 || announce.Full {
 		t.Errorf("должно сохраниться новое объявление: %+v", announce)
+	}
+	if !slices.Equal(announce.PreviousIDs, []int{55, 77}) {
+		t.Errorf("номера прежних объявлений сохраняются для очистки: %v", announce.PreviousIDs)
 	}
 }
 

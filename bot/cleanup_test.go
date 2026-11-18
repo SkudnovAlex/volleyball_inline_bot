@@ -2,6 +2,7 @@ package bot
 
 import (
 	"errors"
+	"slices"
 	"testing"
 
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
@@ -23,7 +24,7 @@ func deletedIDs(requests []tgbotapi.Chattable) []int {
 // Сегодня в тестах 10.11.2026 (tuesday), срок удаления 14 дней: удаляются игры с датой 27.10 и раньше.
 func TestCleanupGames(t *testing.T) {
 	data := storage.Data{BoardMessageID: testBoardID, Games: []storage.Game{
-		{Date: "2026-10-27", MessageID: 1, Finished: true, Announce: &storage.Announce{MessageID: 2}},
+		{Date: "2026-10-27", MessageID: 1, Finished: true, Announce: &storage.Announce{MessageID: 2, PreviousIDs: []int{7, 8}}},
 		{Date: "2026-10-28", MessageID: 3, Finished: true},
 		{Date: "2026-11-09", MessageID: 4},
 		{Date: "2026-11-10", MessageID: 5},
@@ -33,8 +34,8 @@ func TestCleanupGames(t *testing.T) {
 	repository := &mockRepo{data: data}
 	newService(sender, repository, tuesday).CleanupGames()
 
-	if got := deletedIDs(sender.requested); len(got) != 2 || got[0] != 1 || got[1] != 2 {
-		t.Errorf("удаляются сообщение игры 27.10 и её объявление, удалено %v", got)
+	if got := deletedIDs(sender.requested); !slices.Equal(got, []int{1, 7, 8, 2}) {
+		t.Errorf("удаляются сообщение игры 27.10 и все ее объявления, удалено %v", got)
 	}
 
 	games := repository.data.Games

@@ -3,6 +3,7 @@ package game
 import (
 	"fmt"
 	"html"
+	"regexp"
 	"slices"
 	"strings"
 
@@ -69,29 +70,55 @@ func RenderPayment(match *storage.Game) (string, *tgbotapi.InlineKeyboardMarkup)
 	debtors := Debtors(match)
 
 	var text strings.Builder
-	fmt.Fprintf(&text, "<b>%s</b>: зал оплатил %s\n", DayTitle(match.Date), html.EscapeString(payment.RenterName))
-	fmt.Fprintf(&text, "Перевод на %s\n", html.EscapeString(payment.Requisites))
-	fmt.Fprintf(&text, "Было %d, по %d ₽ с человека · перевели %d из %d\n",
-		payment.Came, payment.PerPerson, PaidCount(match, debtors), len(debtors))
+	fmt.Fprintf(&text, "<b>%s</b>: зал оплатил %s\n\n", DayTitle(match.Date), html.EscapeString(payment.RenterName))
+	fmt.Fprintf(&text, "Было %d, по <b>%d ₽</b> с человека\n", payment.Came, payment.PerPerson)
+	fmt.Fprintf(&text, "Перевод на %s\n", RenderRequisites(payment.Requisites))
 
+	fmt.Fprintf(&text, "\n<b>Перевели %d из %d</b>\n", PaidCount(match, debtors), len(debtors))
 	for _, debtor := range debtors {
-		fmt.Fprintf(&text, `<a href="tg://user?id=%d">%s</a> %d ₽`, debtor.UserID, debtor.Name, debtor.People*payment.PerPerson)
+		mark := "⏳"
+		if slices.Contains(payment.PaidUserIDs, debtor.UserID) {
+			mark = "✅"
+		}
+		fmt.Fprintf(&text, `%s <a href="tg://user?id=%d">%s</a> %d ₽`, mark, debtor.UserID, debtor.Name,
+			debtor.People*payment.PerPerson)
 		if debtor.People > 1 {
 			fmt.Fprintf(&text, " (за %d)", debtor.People)
-		}
-		if slices.Contains(payment.PaidUserIDs, debtor.UserID) {
-			text.WriteString(" ✅")
 		}
 		text.WriteString("\n")
 	}
 	if newcomers := Newcomers(match); newcomers > 0 {
 		fmt.Fprintf(&text, "Новенькие: %d × %d ₽, переводят сами\n", newcomers, payment.PerPerson)
 	}
+	text.WriteString("\nПеревел? Нажми кнопку ниже, чтобы отметиться.")
 
 	keyboard := tgbotapi.NewInlineKeyboardMarkup(tgbotapi.NewInlineKeyboardRow(
 		tgbotapi.NewInlineKeyboardButtonData("✅ Перевёл", ActionPaid+":"+match.Date),
 	))
 	return strings.TrimRight(text.String(), "\n"), &keyboard
+}
+
+// phonePattern находит российский номер телефона в реквизитах: +7 или 8 и еще 10 цифр с пробелами, дефисами и скобками
+// между ними. Первая группа это символ перед номером, вторая сам номер. Соседние цифры не допускаются, чтобы не
+// захватить часть номера карты.
+var phonePattern = regexp.MustCompile(`(^|[^\d+])((?:\+7|8)[\s\-()]*\d(?:[\s\-()]*\d){9})(?:$|[^\d])`)
+
+// RenderRequisites возвращает реквизиты в HTML. Телефон приводится к виду +79001234567 и оборачивается в <code>: в
+// мобильном Telegram такой текст копируется нажатием. Если телефона нет, в <code> оборачивается вся строка.
+func RenderRequisites(requisites string) string {
+	match := phonePattern.FindStringSubmatchIndex(requisites)
+	if match == nil {
+		return "<code>" + html.EscapeString(requisites) + "</code>"
+	}
+	start, end := match[4], match[5]
+	digits := strings.Map(func(r rune) rune {
+		if r >= '0' && r <= '9' {
+			return r
+		}
+		return -1
+	}, requisites[start:end])
+	phone := "+7" + digits[1:]
+	return html.EscapeString(requisites[:start]) + "<code>" + phone + "</code>" + html.EscapeString(requisites[end:])
 }
 
 // MarkPaid ставит отметку перевода и возвращает сумму человека. Снять отметку нельзя: повторное нажатие возвращает

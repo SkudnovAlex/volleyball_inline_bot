@@ -40,28 +40,34 @@ func RenderBoard(games []storage.Game, chatID int64) string {
 	if len(finished) > 0 {
 		text.WriteString("\n<b>Прошедшие</b>\n")
 		for _, match := range finished {
-			fmt.Fprintf(&text, "%s · %s\n", gameLink(match, chatID), finishedStatus(&match))
+			fmt.Fprintf(&text, "%s · %s\n", gameLink(match, chatID), finishedStatus(&match, chatID))
 		}
 	}
 	return strings.TrimRight(text.String(), "\n")
 }
 
-// finishedStatus описывает прошедшую игру на доске: после оплаты доля и сколько перевели, до неё сколько было.
-func finishedStatus(match *storage.Game) string {
+// finishedStatus описывает прошедшую игру на доске: после оплаты доля и сколько перевели (ссылкой на сообщение оплаты),
+// до неё сколько было.
+func finishedStatus(match *storage.Game, chatID int64) string {
 	if !IsPaid(match) {
 		return fmt.Sprintf("было %d, зал не оплачен", Attended(match))
 	}
 	debtors := Debtors(match)
-	return fmt.Sprintf("по %d ₽ · перевели %d из %d", match.Payment.PerPerson, PaidCount(match, debtors), len(debtors))
+	paid := fmt.Sprintf("перевели %d из %d", PaidCount(match, debtors), len(debtors))
+	return fmt.Sprintf("по %d ₽ · %s", match.Payment.PerPerson, messageLink(chatID, match.Payment.MessageID, paid))
 }
 
-// gameLink возвращает дату игры ссылкой на её сообщение. Ссылки вида t.me/c/... работают только в супергруппах (ID
-// начинается с -100), в обычной группе дата выводится без ссылки.
+// gameLink возвращает дату игры ссылкой на её сообщение.
 func gameLink(match storage.Game, chatID int64) string {
-	title := DayTitle(match.Date)
+	return messageLink(chatID, match.MessageID, DayTitle(match.Date))
+}
+
+// messageLink возвращает title ссылкой на сообщение чата. Ссылки вида t.me/c/... работают только в супергруппах (ID
+// начинается с -100), в обычной группе и без номера сообщения title выводится без ссылки.
+func messageLink(chatID int64, messageID int, title string) string {
 	internalID, isSupergroup := strings.CutPrefix(strconv.FormatInt(chatID, 10), "-100")
-	if !isSupergroup || match.MessageID == 0 {
+	if !isSupergroup || messageID == 0 {
 		return title
 	}
-	return fmt.Sprintf(`<a href="https://t.me/c/%s/%d">%s</a>`, internalID, match.MessageID, title)
+	return fmt.Sprintf(`<a href="https://t.me/c/%s/%d">%s</a>`, internalID, messageID, title)
 }

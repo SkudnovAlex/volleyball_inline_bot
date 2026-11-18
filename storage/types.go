@@ -34,9 +34,10 @@ type Player struct {
 
 // Announce описывает последнее объявление "состав собран" или "освободилось место".
 type Announce struct {
-	MessageID int   `json:"message_id"`
-	Full      bool  `json:"full"`
-	SentAt    int64 `json:"sent_at"` // unix-время
+	MessageID   int   `json:"message_id"`
+	Full        bool  `json:"full"`
+	SentAt      int64 `json:"sent_at"`                // unix-время
+	PreviousIDs []int `json:"previous_ids,omitempty"` // прежние объявления этой игры, удаляются вместе с игрой
 }
 
 // Шаги оформления оплаты в Draft.Step.

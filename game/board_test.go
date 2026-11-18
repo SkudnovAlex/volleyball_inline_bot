@@ -22,7 +22,7 @@ func TestRenderBoard(t *testing.T) {
 				{UserID: 2, Status: storage.StatusGoing},
 				{UserID: 3, Status: storage.StatusGoing},
 			},
-			Payment: &storage.Payment{RenterID: 3, Came: 3, PerPerson: 500, PaidUserIDs: []int64{2}},
+			Payment: &storage.Payment{RenterID: 3, Came: 3, PerPerson: 500, MessageID: 8, PaidUserIDs: []int64{2}},
 		},
 	}
 
@@ -35,7 +35,7 @@ func TestRenderBoard(t *testing.T) {
 		`<a href="https://t.me/c/1234567890/30">Воскресенье 22.11</a> · 0/12`,
 		"",
 		"<b>Прошедшие</b>",
-		`<a href="https://t.me/c/1234567890/7">Воскресенье 15.11</a> · по 500 ₽ · перевели 1 из 2`,
+		`<a href="https://t.me/c/1234567890/7">Воскресенье 15.11</a> · по 500 ₽ · <a href="https://t.me/c/1234567890/8">перевели 1 из 2</a>`,
 		`<a href="https://t.me/c/1234567890/5">Четверг 12.11</a> · было 1, зал не оплачен`,
 	}, "\n")
 	if got != want {

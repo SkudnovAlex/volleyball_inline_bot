@@ -39,7 +39,13 @@ func (s *Service) announce(match *storage.Game, event game.Event) {
 		log.Printf("Не удалось отправить объявление по игре %s: %v", match.Date, err)
 		return
 	}
-	match.Announce = &storage.Announce{MessageID: sentMessage.MessageID, Full: full, SentAt: now.Unix()}
+	// Номера прежних объявлений сохраняются, чтобы очистка удалила их вместе с игрой.
+	var previousIDs []int
+	if previous != nil {
+		previousIDs = append(previous.PreviousIDs, previous.MessageID)
+	}
+	match.Announce = &storage.Announce{MessageID: sentMessage.MessageID, Full: full, SentAt: now.Unix(),
+		PreviousIDs: previousIDs}
 }
 
 func announceText(match *storage.Game, full bool) string {

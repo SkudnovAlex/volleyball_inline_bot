@@ -49,12 +49,13 @@ func (s *Service) CleanupGames() {
 	s.updateBoardAndSave(&data)
 }
 
-// deleteGame удаляет из чата сообщение игры, объявление и сообщение оплаты. Возвращает true, если игру можно убрать из
-// данных. При нехватке прав запись остаётся до следующей очистки, при прочих ошибках (например, сообщение уже удалили
-// вручную) убирается.
+// deleteGame удаляет из чата сообщение игры, все ее объявления и сообщение оплаты. Возвращает true, если игру можно
+// убрать из данных. При нехватке прав запись остаётся до следующей очистки, при прочих ошибках (например, сообщение уже
+// удалили вручную) убирается.
 func (s *Service) deleteGame(match storage.Game) bool {
 	messageIDs := []int{match.MessageID}
 	if match.Announce != nil {
+		messageIDs = append(messageIDs, match.Announce.PreviousIDs...)
 		messageIDs = append(messageIDs, match.Announce.MessageID)
 	}
 	if match.Payment != nil && match.Payment.MessageID != 0 {

@@ -48,12 +48,17 @@ func TestRenderPayment(t *testing.T) {
 
 	want := strings.Join([]string{
 		"<b>Понедельник 09.11</b>: зал оплатил Иван",
-		"Перевод на Т-Банк +7 900 123-45-67",
-		"Было 9, по 540 ₽ с человека · перевели 1 из 3",
-		`<a href="tg://user?id=1">Мария</a> 540 ₽ ✅`,
-		`<a href="tg://user?id=2">Сергей</a> 540 ₽`,
-		`<a href="tg://user?id=3">Дмитрий</a> 1620 ₽ (за 3)`,
+		"",
+		"Было 9, по <b>540 ₽</b> с человека",
+		"Перевод на Т-Банк <code>+79001234567</code>",
+		"",
+		"<b>Перевели 1 из 3</b>",
+		`✅ <a href="tg://user?id=1">Мария</a> 540 ₽`,
+		`⏳ <a href="tg://user?id=2">Сергей</a> 540 ₽`,
+		`⏳ <a href="tg://user?id=3">Дмитрий</a> 1620 ₽ (за 3)`,
 		"Новенькие: 2 × 540 ₽, переводят сами",
+		"",
+		"Перевел? Нажми кнопку ниже, чтобы отметиться.",
 	}, "\n")
 	if text != want {
 		t.Fatalf("текст:\n%s\n\nожидалось:\n%s", text, want)
@@ -71,6 +76,25 @@ func TestRenderPayment_NoNewcomers(t *testing.T) {
 
 	if strings.Contains(text, "Новенькие") {
 		t.Fatalf("новеньких нет, строки быть не должно:\n%s", text)
+	}
+}
+
+func TestRenderRequisites(t *testing.T) {
+	for _, testCase := range []struct {
+		requisites string
+		want       string
+	}{
+		{"Т-Банк +7 900 123-45-67", "Т-Банк <code>+79001234567</code>"},
+		{"Сбер 8 (900) 123 45 67 Иван", "Сбер <code>+79001234567</code> Иван"},
+		{"+79001234567", "<code>+79001234567</code>"},
+		{"89001234567, Альфа", "<code>+79001234567</code>, Альфа"},
+		{"Карта 2200 1234 5678 9012", "<code>Карта 2200 1234 5678 9012</code>"},
+		{"Сбер 8900", "<code>Сбер 8900</code>"},
+		{"Т&Б 8-900-123-45-67", "Т&amp;Б <code>+79001234567</code>"},
+	} {
+		if got := RenderRequisites(testCase.requisites); got != testCase.want {
+			t.Errorf("%q: получено %q, ожидалось %q", testCase.requisites, got, testCase.want)
+		}
 	}
 }
 
