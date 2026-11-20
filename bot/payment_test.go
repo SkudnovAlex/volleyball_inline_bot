@@ -222,8 +222,8 @@ func TestPayment_NewcomersNote(t *testing.T) {
 	service.HandleCallback(press(ivan, "hall:2026-11-09", testChatID))
 
 	service.HandlePrivateMessage(write(ivan, "6"))
-	if text := lastPrivate(t, sender).Text; !strings.HasPrefix(text, "В списке 4, было 6: новеньких 2, они переведут сами.") {
-		t.Fatalf("ожидалась заметка про новеньких: %q", text)
+	if text := lastPrivate(t, sender).Text; !strings.HasPrefix(text, "В списке 4, было 6: вне списка 2, они переведут сами.") {
+		t.Fatalf("ожидалась заметка про игроков вне списка: %q", text)
 	}
 }
 

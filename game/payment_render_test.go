@@ -8,7 +8,7 @@ import (
 )
 
 // paidGame: Иван с другом оплатил 5400 ₽ на 9 человек. Сергей не пришёл, но его друг был, Дмитрий привёл двоих, Мария
-// уже перевела, двое новеньких.
+// уже перевела, двое пришли вне списка.
 func paidGame() *storage.Game {
 	return &storage.Game{Date: "2026-11-09", MessageID: 50, Finished: true,
 		Players: []storage.Player{
@@ -56,7 +56,7 @@ func TestRenderPayment(t *testing.T) {
 		`✅ <a href="tg://user?id=1">Мария</a> 540 ₽`,
 		`⏳ <a href="tg://user?id=2">Сергей</a> 540 ₽`,
 		`⏳ <a href="tg://user?id=3">Дмитрий</a> 1620 ₽ (за 3)`,
-		"Новенькие: 2 × 540 ₽, переводят сами",
+		"Вне списка: 2 × 540 ₽, переводят сами",
 		"",
 		"Перевел? Нажми кнопку ниже, чтобы отметиться.",
 	}, "\n")
@@ -74,8 +74,8 @@ func TestRenderPayment_NoNewcomers(t *testing.T) {
 
 	text, _ := RenderPayment(match)
 
-	if strings.Contains(text, "Новенькие") {
-		t.Fatalf("новеньких нет, строки быть не должно:\n%s", text)
+	if strings.Contains(text, "Вне списка") {
+		t.Fatalf("игроков вне списка нет, строки быть не должно:\n%s", text)
 	}
 }
 

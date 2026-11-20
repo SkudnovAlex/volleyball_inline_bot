@@ -88,7 +88,7 @@ func RenderPayment(match *storage.Game) (string, *tgbotapi.InlineKeyboardMarkup)
 		text.WriteString("\n")
 	}
 	if newcomers := Newcomers(match); newcomers > 0 {
-		fmt.Fprintf(&text, "Новенькие: %d × %d ₽, переводят сами\n", newcomers, payment.PerPerson)
+		fmt.Fprintf(&text, "Вне списка: %d × %d ₽, переводят сами\n", newcomers, payment.PerPerson)
 	}
 	text.WriteString("\nПеревел? Нажми кнопку ниже, чтобы отметиться.")
 

@@ -118,7 +118,7 @@ func (s *Service) HandlePrivateMessage(message *tgbotapi.Message) {
 		} else {
 			draft.Step = storage.StepTotal
 			if came > lines {
-				note = fmt.Sprintf("В списке %d, было %d: новеньких %d, они переведут сами.", lines, came, came-lines)
+				note = fmt.Sprintf("В списке %d, было %d: вне списка %d, они переведут сами.", lines, came, came-lines)
 			}
 		}
 		s.saveAndSendStep(&data, userID, match, note)
@@ -375,7 +375,7 @@ func mismatchNote(match *storage.Game, draft *storage.Draft) string {
 	if present == draft.Came {
 		return ""
 	}
-	return fmt.Sprintf("По отметкам выходит %d, а ты указал %d. Делю на %d: разница это новенькие или ошибка в списке.",
+	return fmt.Sprintf("По отметкам выходит %d, а ты указал %d. Делю на %d: разница это игроки вне списка или ошибка в списке.",
 		present, draft.Came, draft.Came)
 }
 
