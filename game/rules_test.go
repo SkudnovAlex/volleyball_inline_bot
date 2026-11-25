@@ -1,13 +1,38 @@
 package game
 
 import (
+	"os"
 	"strings"
 	"testing"
+
+	"volleyball_inline_bot/config"
 )
+
+func TestMain(m *testing.M) {
+	os.Setenv("TELEGRAM_BOT_TOKEN", "test")
+	os.Setenv("TELEGRAM_CHAT_ID", "42")
+	os.Setenv("GAME_DAYS", "Tuesday,Thursday,Friday,Sunday")
+	os.Setenv("GAME_TIME", "")
+	settings, err := config.Load()
+	if err != nil {
+		panic(err)
+	}
+	DefaultRules.GameTimes = settings.GameTimes
+	Configure(DefaultRules)
+	os.Exit(m.Run())
+}
 
 func TestConfigure(t *testing.T) {
 	t.Cleanup(func() { Configure(DefaultRules) })
-	Configure(Rules{GameTime: "20:30", Limit: 4, MaxFriends: 1, MaxCame: 10, MinTotal: 500, MaxTotal: 2000, RoundTo: 50})
+	t.Setenv("GAME_TIME", "20:30")
+	settings, err := config.Load()
+	if err != nil {
+		t.Fatal(err)
+	}
+	Configure(Rules{
+		GameTimes: settings.GameTimes,
+		Limit:     4, MaxFriends: 1, MaxCame: 10, MinTotal: 500, MaxTotal: 2000, RoundTo: 50,
+	})
 
 	game := gameWith(3)
 	game.Date = "2026-11-17"

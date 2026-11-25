@@ -8,7 +8,7 @@ const (
 	defaultBoardCheckSchedule = "0 * * * *"
 	defaultBoardRaiseSchedule = "15 0 * * *"
 	defaultTimezone           = "Europe/Moscow"
-	defaultGameDays           = "Tuesday,Thursday,Friday,Sunday"
+	defaultGameDays           = "Tuesday,Thursday@19:30,Friday,Sunday"
 	defaultGameTime           = "19:00"
 	defaultFinishAfter        = "1h"
 	defaultDeleteAfterDays    = "7"

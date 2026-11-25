@@ -48,7 +48,7 @@ func RenderGame(game *storage.Game) (string, *tgbotapi.InlineKeyboardMarkup) {
 		fmt.Fprintf(&text, "🏐 <b>%s · игра прошла</b>\n", DayTitle(game.Date))
 		fmt.Fprintf(&text, "Было человек: %d\n", Attended(game))
 	} else {
-		fmt.Fprintf(&text, "🏐 <b>%s · %s</b>\n", DayTitle(game.Date), rules.GameTime)
+		fmt.Fprintf(&text, "🏐 <b>%s · %s</b>\n", DayTitle(game.Date), rules.GameTimeOn(game.Date))
 		status := fmt.Sprintf("свободно %d", rules.Limit-count)
 		if count >= rules.Limit {
 			status = "состав собран"

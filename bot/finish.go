@@ -26,7 +26,7 @@ func (s *Service) FinishGames() {
 		if match.Finished {
 			continue
 		}
-		start, err := time.ParseInLocation(game.DateLayout+" 15:04", match.Date+" "+game.Current().GameTime,
+		start, err := time.ParseInLocation(game.DateLayout+" 15:04", match.Date+" "+game.Current().GameTimeOn(match.Date),
 			now.Location())
 		if err != nil {
 			log.Printf("Не удалось определить начало игры %s: %v", match.Date, err)

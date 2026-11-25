@@ -28,7 +28,7 @@ func main() {
 	log.Printf("Бот @%s запущен", botAPI.Self.UserName)
 
 	game.Configure(game.Rules{
-		GameTime:   settings.GameTime,
+		GameTimes:  settings.GameTimes,
 		Limit:      settings.PlayersLimit,
 		MaxFriends: settings.MaxFriends,
 		MaxCame:    settings.PaymentMaxCame,
@@ -57,10 +57,14 @@ func main() {
 		job      func()
 	}{
 		{"CRON_SCHEDULE", settings.Schedule, service.CreateGame},
-		{"GAME_TIME + FINISH_AFTER", settings.FinishSchedule, service.FinishGames},
 		{"CLEANUP_SCHEDULE", settings.CleanupSchedule, service.CleanupGames},
 		{"BOARD_CHECK_SCHEDULE", settings.BoardCheckSchedule, service.RefreshBoard},
 		{"BOARD_RAISE_SCHEDULE", settings.BoardRaiseSchedule, service.RaiseBoard},
+	}
+	for _, schedule := range settings.FinishSchedules {
+		if err := scheduler.Add(planner, schedule, service.FinishGames); err != nil {
+			log.Fatalf("Ошибка в расписании закрытия игр %q: %v", schedule, err)
+		}
 	}
 	for _, job := range jobs {
 		if err := scheduler.Add(planner, job.schedule, job.job); err != nil {
@@ -78,7 +82,7 @@ func main() {
 
 	planner.Start()
 	log.Printf("Планировщик запущен (создание: %q, закрытие игр: %q, очистка: %q, доска: %q, подъем доски: %q, зона: %s)",
-		settings.Schedule, settings.FinishSchedule, settings.CleanupSchedule, settings.BoardCheckSchedule,
+		settings.Schedule, settings.FinishSchedules, settings.CleanupSchedule, settings.BoardCheckSchedule,
 		settings.BoardRaiseSchedule, settings.Location)
 
 	updatesConfig := tgbotapi.NewUpdate(0)

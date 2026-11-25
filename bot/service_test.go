@@ -3,13 +3,31 @@ package bot
 import (
 	"encoding/json"
 	"errors"
+	"os"
 	"testing"
 	"time"
 
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
 
+	"volleyball_inline_bot/config"
+	"volleyball_inline_bot/game"
 	"volleyball_inline_bot/storage"
 )
+
+func TestMain(m *testing.M) {
+	os.Setenv("TELEGRAM_BOT_TOKEN", "test")
+	os.Setenv("TELEGRAM_CHAT_ID", "42")
+	os.Setenv("GAME_DAYS", "Tuesday,Thursday,Friday,Sunday")
+	os.Setenv("GAME_TIME", "")
+	settings, err := config.Load()
+	if err != nil {
+		panic(err)
+	}
+	rules := game.DefaultRules
+	rules.GameTimes = settings.GameTimes
+	game.Configure(rules)
+	os.Exit(m.Run())
+}
 
 type mockSender struct {
 	sent      []tgbotapi.Chattable

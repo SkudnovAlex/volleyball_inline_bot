@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"log"
 	"os"
+	"slices"
 	"strconv"
 	"strings"
 	"time"
@@ -54,7 +55,7 @@ func Load() (*Config, error) {
 		return nil, fmt.Errorf("некорректный TIMEZONE %q: %w", timezoneName, err)
 	}
 
-	gameDays, err := parseGameDays(getenvDefault("GAME_DAYS", defaultGameDays))
+	gameDays, gameTimes, err := parseGameDays(getenvDefault("GAME_DAYS", defaultGameDays))
 	if err != nil {
 		return nil, fmt.Errorf("некорректный GAME_DAYS: %w", err)
 	}
@@ -74,6 +75,18 @@ func Load() (*Config, error) {
 		return nil, fmt.Errorf("некорректный FINISH_AFTER: нужно целое число минут, например 60m или 1h30m")
 	}
 	finishClock := gameClock.Add(finishAfter)
+	finishSchedules := []string{dailySchedule(finishClock)}
+	for day := time.Sunday; day <= time.Saturday; day++ {
+		clock, ok := gameTimes[day]
+		if !ok {
+			clock = gameClock
+			gameTimes[day] = clock
+		}
+		schedule := dailySchedule(clock.Add(finishAfter))
+		if !slices.Contains(finishSchedules, schedule) {
+			finishSchedules = append(finishSchedules, schedule)
+		}
+	}
 
 	settings := &Config{
 		BotToken:           token,
@@ -86,8 +99,9 @@ func Load() (*Config, error) {
 		Location:           location,
 		GameDays:           gameDays,
 		GameTime:           gameTime,
+		GameTimes:          gameTimes,
 		FinishAfter:        finishAfter,
-		FinishSchedule:     fmt.Sprintf("%d %d * * *", finishClock.Minute(), finishClock.Hour()),
+		FinishSchedules:    finishSchedules,
 	}
 
 	numbers := []struct {
@@ -123,25 +137,37 @@ func Load() (*Config, error) {
 	return settings, nil
 }
 
-// parseGameDays разбирает список игровых дней вида "Tuesday,Thursday" (англ. названия, регистр не важен) в
-// map[time.Weekday]bool.
-func parseGameDays(list string) (map[time.Weekday]bool, error) {
+func dailySchedule(clock time.Time) string {
+	return fmt.Sprintf("%d %d * * *", clock.Minute(), clock.Hour())
+}
+
+// parseGameDays разбирает список игровых дней вида "Tuesday,Thursday@19:30".
+func parseGameDays(list string) (map[time.Weekday]bool, map[time.Weekday]time.Time, error) {
 	result := make(map[time.Weekday]bool)
+	gameTimes := make(map[time.Weekday]time.Time)
 	for _, part := range strings.Split(list, ",") {
-		name := strings.ToLower(strings.TrimSpace(part))
-		if name == "" {
+		name, clockText, hasTime := strings.Cut(strings.TrimSpace(part), "@")
+		name = strings.ToLower(strings.TrimSpace(name))
+		if name == "" && !hasTime {
 			continue
 		}
 		weekday, ok := weekdayByName[name]
 		if !ok {
-			return nil, fmt.Errorf("неизвестный день недели %q", part)
+			return nil, nil, fmt.Errorf("неизвестный день недели %q", part)
 		}
 		result[weekday] = true
+		if hasTime {
+			clock, err := time.Parse("15:04", strings.TrimSpace(clockText))
+			if err != nil {
+				return nil, nil, fmt.Errorf("некорректное время в %q: нужен формат ЧЧ:ММ", part)
+			}
+			gameTimes[weekday] = clock
+		}
 	}
 	if len(result) == 0 {
-		return nil, fmt.Errorf("список игровых дней пуст")
+		return nil, nil, fmt.Errorf("список игровых дней пуст")
 	}
-	return result, nil
+	return result, gameTimes, nil
 }
 
 // positiveInt читает целое число больше нуля.

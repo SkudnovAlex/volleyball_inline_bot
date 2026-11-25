@@ -1,10 +1,46 @@
 package config
 
 import (
+	"slices"
 	"strings"
 	"testing"
 	"time"
 )
+
+func TestLoad_ThursdayTimeAndDefaultForOtherDays(t *testing.T) {
+	for _, gameTime := range []string{"19:00", "18:15"} {
+		t.Run(gameTime, func(t *testing.T) {
+			setRequired(t)
+			t.Setenv("GAME_DAYS", "")
+			t.Setenv("GAME_TIME", gameTime)
+
+			settings, err := Load()
+			if err != nil {
+				t.Fatalf("ошибка загрузки конфигурации: %v", err)
+			}
+			if len(settings.GameTimes) != 7 {
+				t.Fatalf("ожидалось время для всех дней недели: %v", settings.GameTimes)
+			}
+			for _, testCase := range []struct {
+				date string
+				want string
+			}{
+				{"2026-11-17", gameTime},
+				{"2026-11-19", "19:30"},
+				{"2026-11-20", gameTime},
+				{"2026-11-22", gameTime},
+			} {
+				day, err := time.Parse("2006-01-02", testCase.date)
+				if err != nil {
+					t.Fatal(err)
+				}
+				if got := settings.GameTimes[day.Weekday()].Format("15:04"); got != testCase.want {
+					t.Errorf("время игры %s = %s, ожидалось %s", testCase.date, got, testCase.want)
+				}
+			}
+		})
+	}
+}
 
 func TestLoad_OK_WithDefaults(t *testing.T) {
 	t.Setenv("TELEGRAM_BOT_TOKEN", "token123")
@@ -161,14 +197,18 @@ var newVariables = []string{
 	"FINISH_AFTER", "CLEANUP_SCHEDULE", "BOARD_RAISE_SCHEDULE",
 }
 
-func TestLoad_FinishSchedule(t *testing.T) {
-	cases := []struct{ gameTime, finishAfter, want string }{
-		{"", "", "0 20 * * *"},
-		{"20:30", "90m", "0 22 * * *"},
-		{"23:30", "1h", "30 0 * * *"},
+func TestLoad_FinishSchedules(t *testing.T) {
+	cases := []struct {
+		gameDays, gameTime, finishAfter string
+		want                            []string
+	}{
+		{"", "", "", []string{"0 20 * * *", "30 20 * * *"}},
+		{"Tuesday,Thursday", "20:30", "90m", []string{"0 22 * * *"}},
+		{"Tuesday,Thursday@23:30,Friday@23:30", "19:00", "1h", []string{"0 20 * * *", "30 0 * * *"}},
 	}
 	for _, testCase := range cases {
 		setRequired(t)
+		t.Setenv("GAME_DAYS", testCase.gameDays)
 		t.Setenv("GAME_TIME", testCase.gameTime)
 		t.Setenv("FINISH_AFTER", testCase.finishAfter)
 
@@ -176,9 +216,9 @@ func TestLoad_FinishSchedule(t *testing.T) {
 		if err != nil {
 			t.Fatalf("неожиданная ошибка: %v", err)
 		}
-		if settings.FinishSchedule != testCase.want {
+		if !slices.Equal(settings.FinishSchedules, testCase.want) {
 			t.Errorf("GAME_TIME=%q FINISH_AFTER=%q: расписание %q, ожидалось %q",
-				testCase.gameTime, testCase.finishAfter, settings.FinishSchedule, testCase.want)
+				testCase.gameTime, testCase.finishAfter, settings.FinishSchedules, testCase.want)
 		}
 	}
 }

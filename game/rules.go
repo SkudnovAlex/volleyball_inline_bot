@@ -1,21 +1,23 @@
 package game
 
-import "fmt"
+import (
+	"fmt"
+	"time"
+)
 
 // Rules содержит правила записи и оплаты из конфигурации.
 type Rules struct {
-	GameTime   string // время игры для сообщения, "ЧЧ:ММ"
-	Limit      int    // сколько человек нужно на игру
-	MaxFriends int    // сколько друзей может привести один человек
-	MaxCame    int    // максимум в ответе "сколько было" при оплате
-	MinTotal   int    // минимальная сумма за зал, ₽
-	MaxTotal   int    // максимальная сумма за зал, ₽
-	RoundTo    int    // шаг округления доли вверх, ₽
+	GameTimes  map[time.Weekday]time.Time
+	Limit      int // сколько человек нужно на игру
+	MaxFriends int // сколько друзей может привести один человек
+	MaxCame    int // максимум в ответе "сколько было" при оплате
+	MinTotal   int // минимальная сумма за зал, ₽
+	MaxTotal   int // максимальная сумма за зал, ₽
+	RoundTo    int // шаг округления доли вверх, ₽
 }
 
 // DefaultRules это правила по умолчанию, они же действуют в тестах.
 var DefaultRules = Rules{
-	GameTime:   "19:00",
 	Limit:      12,
 	MaxFriends: 4,
 	MaxCame:    30,
@@ -54,4 +56,15 @@ func Configure(configured Rules) {
 // Current возвращает действующие правила.
 func Current() Rules {
 	return rules
+}
+
+// GameTimeOn возвращает время начала игры для даты в формате DateLayout.
+func (r Rules) GameTimeOn(date string) string {
+	day, err := time.Parse(DateLayout, date)
+	if err == nil {
+		if clock, ok := r.GameTimes[day.Weekday()]; ok {
+			return clock.Format("15:04")
+		}
+	}
+	return ""
 }

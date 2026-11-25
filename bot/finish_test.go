@@ -1,11 +1,64 @@
 package bot
 
 import (
+	"strings"
 	"testing"
 	"time"
 
+	"volleyball_inline_bot/config"
+	"volleyball_inline_bot/game"
 	"volleyball_inline_bot/storage"
 )
+
+func TestFinishGames_UsesWeekdayStartTime(t *testing.T) {
+	rules := game.Current()
+	t.Cleanup(func() { game.Configure(rules) })
+	t.Setenv("GAME_TIME", "18:15")
+	t.Setenv("GAME_DAYS", "Tuesday,Thursday@19:30")
+	t.Setenv("FINISH_AFTER", "1h")
+	settings, err := config.Load()
+	if err != nil {
+		t.Fatal(err)
+	}
+	configured := rules
+	configured.GameTimes = settings.GameTimes
+	game.Configure(configured)
+
+	for _, testCase := range []struct {
+		date   string
+		start  string
+		finish string
+	}{
+		{"2026-11-10", "18:15", "19:15"},
+		{"2026-11-12", "19:30", "20:30"},
+	} {
+		t.Run(testCase.date, func(t *testing.T) {
+			sender := &mockSender{pinnedMessageID: testBoardID}
+			repository := &mockRepo{data: storage.Data{BoardMessageID: testBoardID, Games: []storage.Game{
+				{Date: testCase.date, MessageID: 5},
+			}}}
+			if text, _ := game.RenderGame(&repository.data.Games[0]); !strings.Contains(text, testCase.start) {
+				t.Fatalf("в сообщении игры должно быть %s: %s", testCase.start, text)
+			}
+			finish, err := time.Parse("2006-01-02 15:04", testCase.date+" "+testCase.finish)
+			if err != nil {
+				t.Fatal(err)
+			}
+			now := finish.Add(-time.Minute)
+			service := finishService(sender, repository, now)
+			service.finishAfter = settings.FinishAfter
+			service.FinishGames()
+			if repository.data.Games[0].Finished {
+				t.Fatal("за минуту до закрытия игра должна быть открыта")
+			}
+			service.now = func() time.Time { return finish }
+			service.FinishGames()
+			if !repository.data.Games[0].Finished {
+				t.Fatal("в настроенное время игра должна закрыться")
+			}
+		})
+	}
+}
 
 // finishService создаёт сервис с закрытием через час после начала. Время игры в тестах 19:00 (game.DefaultRules).
 func finishService(sender *mockSender, repository *mockRepo, now time.Time) *Service {
